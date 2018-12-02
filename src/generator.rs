@@ -1,10 +1,11 @@
+use lexer::Operator::*;
 use parser::*;
 
 pub fn generate(ast: &Program) -> String {
     let mut output = String::new();
 
     match ast {
-        Program::Function(FunDecl::Fun(name, statements)) => {
+        Program::Program(FunctionDeclaration::Function(name, statements)) => {
             output.push_str(&format!("  .global {}\n", name));
             
             for s in statements {
@@ -29,8 +30,22 @@ fn generate_statement(statement: &Statement) -> String {
     output
 }
 
-fn generate_expression(expr: &Expr) -> String {
-    match expr {
-        Expr::Constant(c) => format!("  mov rax, {}\n", c),
+fn generate_expression(expression: &Expression) -> String {
+    match expression {
+        Expression::Constant(n) => format!("  mov rax, {}\n", n),
+        Expression::UnaryOp(op, expr) => {
+            let mut generated = generate_expression(expr);
+            match op {
+                Minus => generated.push_str("  neg rax\n"),
+                BitwiseComplement => generated.push_str("  not rax\n"),
+                LogicalNegation => {
+                    generated.push_str("  cmp 0, rax\n");
+                    generated.push_str("  sete al\n");
+                    generated.push_str("  movzb rax, al\n");
+                }
+            }
+            
+            return generated;
+        }
     }
 }

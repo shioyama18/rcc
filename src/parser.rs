@@ -5,20 +5,21 @@ use lexer::*;
 
 #[derive(Debug)]
 pub enum Program {
-    Function(FunDecl),
+    Program(FunctionDeclaration),
 }
 #[derive(Debug)]
-pub enum FunDecl {
-    Fun(String, Vec<Statement>),
+pub enum FunctionDeclaration {
+    Function(String, Vec<Statement>),
 }
 
 #[derive(Debug)]
 pub enum Statement {
-    Return(Expr),
+    Return(Expression),
 }
 
 #[derive(Debug)]
-pub enum Expr {
+pub enum Expression {
+    UnaryOp(Operator, Box<Expression>),
     Constant(i32),
 }
 
@@ -46,7 +47,7 @@ fn parse_function(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
 
                                                     match tokens.next() {
                                                         Some(Token::Punctuation(Punctuation::CloseBrace)) => {
-                                                            return Program::Function(FunDecl::Fun(id.to_string(), statements));
+                                                            return Program::Program(FunctionDeclaration::Function(id.to_string(), statements));
                                                         }
                                                         _ => panic!("Expected closing braces"),
                                                     }
@@ -76,7 +77,7 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
     match tokens.peek_nth(0) {
         Some(Token::Keyword(Keyword::Return)) => {
             tokens.next();
-            statement = Statement::Return(parse_expr(tokens));
+            statement = Statement::Return(parse_expression(tokens));
         }
         _ => panic!("Expected return statement"),
     }
@@ -87,11 +88,15 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
     }
 }
 
-fn parse_expr(tokens: &mut PeekableNth<Iter<Token>>) -> Expr {
+fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
     match tokens.peek_nth(0) {
         Some(Token::Constant(c)) => {
             tokens.next();
-            return Expr::Constant(*c);
+            return Expression::Constant(*c);
+        }
+        Some(Token::Operator(op)) => {
+            tokens.next();
+            return Expression::UnaryOp(*op, Box::new(parse_expression(tokens)));
         }
         _ => panic!("Expected constant"),
     }

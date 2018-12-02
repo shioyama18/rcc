@@ -1,18 +1,20 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Identifier(String),
     Keyword(Keyword),
     Constant(i32),
     Punctuation(Punctuation),
+    Operator(Operator),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Keyword {
     Int,
     Return,
 }
 
-#[derive(Debug, PartialEq)]
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Punctuation {
     OpenParen,
     CloseParen,
@@ -21,8 +23,16 @@ pub enum Punctuation {
     Semicolon,
 }
 
-use self::Punctuation::*;
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Operator {
+    Minus,
+    BitwiseComplement,
+    LogicalNegation,
+}
+
+use self::Operator::*;
 use self::Keyword::*;
+use self::Punctuation::*;
 
 pub fn lex(input: &str) -> Vec<Token> {
     let input = input.chars().collect::<Vec<_>>();
@@ -37,6 +47,9 @@ pub fn lex(input: &str) -> Vec<Token> {
             '{' => tokens.push(Token::Punctuation(OpenBrace)),
             '}' => tokens.push(Token::Punctuation(CloseBrace)),
             ';' => tokens.push(Token::Punctuation(Semicolon)),
+            '-' => tokens.push(Token::Operator(Minus)),
+            '!' => tokens.push(Token::Operator(LogicalNegation)),
+            '~' => tokens.push(Token::Operator(BitwiseComplement)),
             c => {
                 if c.is_alphabetic() {
                     let mut s = c.to_string();

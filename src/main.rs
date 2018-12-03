@@ -23,7 +23,9 @@ fn main() {
             std::process::exit(1);
         }
     };
+    // println!("{:#?}", tokens);
     let ast = parse(&tokens);
+    // println!("{:#?}", ast);
     let generated = generate(&ast);
     
     println!(".intel_syntax noprefix");

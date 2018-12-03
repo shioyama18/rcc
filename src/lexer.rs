@@ -13,7 +13,6 @@ pub enum Keyword {
     Return,
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Punctuation {
     OpenParen,
@@ -25,9 +24,23 @@ pub enum Punctuation {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Operator {
+    Plus,
     Minus,
+    Division,
+    Multiplication,
     BitwiseComplement,
     LogicalNegation,
+}
+
+impl Operator {
+    pub fn is_unary(&self) -> bool {
+        match self {
+            | Operator::Minus
+            | Operator::BitwiseComplement
+            | Operator::LogicalNegation => true,
+            _ => false,
+        }
+    }
 }
 
 use self::Operator::*;
@@ -47,7 +60,10 @@ pub fn lex(input: &str) -> Vec<Token> {
             '{' => tokens.push(Token::Punctuation(OpenBrace)),
             '}' => tokens.push(Token::Punctuation(CloseBrace)),
             ';' => tokens.push(Token::Punctuation(Semicolon)),
+            '+' => tokens.push(Token::Operator(Plus)),
             '-' => tokens.push(Token::Operator(Minus)),
+            '*' => tokens.push(Token::Operator(Multiplication)),
+            '/' => tokens.push(Token::Operator(Division)),
             '!' => tokens.push(Token::Operator(LogicalNegation)),
             '~' => tokens.push(Token::Operator(BitwiseComplement)),
             c => {

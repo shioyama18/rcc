@@ -10,5 +10,5 @@ Cargo.lock
 **/*.rs.bk
 
 # Test from https://github.com/nlsandler/write_a_c_compiler
+test.c
 tmp*
-/write_a_c_compiler/

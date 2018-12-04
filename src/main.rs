@@ -25,13 +25,9 @@ fn main() {
     };
     // println!("{:#?}", tokens);
     let ast = parse(&tokens);
-    // println!("{:#?}", ast);
-    let generated = generate(&ast);
-    
-    println!(".intel_syntax noprefix");
-    println!(".global main");
-    println!("main:");
+    //println!("{:#?}", ast);
 
+    let generated = generate(&ast);
     println!("{}", generated);
 }
 

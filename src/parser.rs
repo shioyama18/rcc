@@ -90,6 +90,85 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
 }
 
 fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    // Call expression of lowest precedence
+    parse_logical_or_expression(tokens)
+}
+
+/// TODO: Make all binary operation a macro
+
+fn parse_logical_or_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    let mut expression = parse_logical_and_expression(tokens);
+    
+    loop {
+        match tokens.peek_nth(0) {
+            Some(Token::Operator(op)) if op == &Operator::LogicalOr => {
+                tokens.next();
+                let next_expression = parse_logical_and_expression(tokens);
+                expression = Expression::BinaryOp(*op, Box::new(expression), Box::new(next_expression));
+            }
+            _ => break,
+        }
+    }
+
+    expression
+}
+
+fn parse_logical_and_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    let mut expression = parse_equality_expression(tokens);
+    
+    loop {
+        match tokens.peek_nth(0) {
+            Some(Token::Operator(op)) if op == &Operator::LogicalAnd => {
+                tokens.next();
+                let next_expression = parse_equality_expression(tokens);
+                expression = Expression::BinaryOp(*op, Box::new(expression), Box::new(next_expression));
+            }
+            _ => break,
+        }
+    }
+
+    expression
+}
+
+fn parse_equality_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    let mut term = parse_relational_expression(tokens);
+
+    loop {
+        match tokens.peek_nth(0) {
+            Some(Token::Operator(op)) if op == &Operator::Equal || op == &Operator::NotEqual => {
+                tokens.next();
+                let next_term = parse_relational_expression(tokens);
+                term = Expression::BinaryOp(*op, Box::new(term), Box::new(next_term));
+            }
+            _ => break,
+        }
+    }
+    
+    term
+}
+
+fn parse_relational_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    let mut term = parse_additive_expression(tokens);
+
+    loop {
+        match tokens.peek_nth(0) {
+            Some(Token::Operator(op)) if op == &Operator::LessThan
+                || op == &Operator::LessThanOrEqual
+                || op == &Operator::GreaterThan
+                || op == &Operator::GreaterThanOrEqual
+            => {
+                tokens.next();
+                let next_term = parse_additive_expression(tokens);
+                term = Expression::BinaryOp(*op, Box::new(term), Box::new(next_term));
+            }
+            _ => break,
+        }
+    }
+    
+    term
+}
+
+fn parse_additive_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
     let mut term = parse_term(tokens);
 
     loop {

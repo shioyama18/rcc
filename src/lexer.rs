@@ -24,12 +24,20 @@ pub enum Punctuation {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Operator {
-    Plus,
-    Minus,
-    Division,
-    Multiplication,
-    BitwiseComplement,
-    LogicalNegation,
+    Plus,                 // +
+    Minus,                // -
+    Multiplication,       // *
+    Division,             // /
+    BitwiseComplement,    // ~
+    LogicalNegation,      // !
+    LogicalAnd,           // &&
+    LogicalOr,            // ||
+    Equal,                // ==
+    NotEqual,             // !=
+    LessThan,             // <
+    LessThanOrEqual,      // <=
+    GreaterThan,          // >
+    GreaterThanOrEqual,   // >=
 }
 
 impl Operator {
@@ -64,8 +72,55 @@ pub fn lex(input: &str) -> Vec<Token> {
             '-' => tokens.push(Token::Operator(Minus)),
             '*' => tokens.push(Token::Operator(Multiplication)),
             '/' => tokens.push(Token::Operator(Division)),
-            '!' => tokens.push(Token::Operator(LogicalNegation)),
+            '!' => {
+                if input.get(i+1) == Some(&'=') {
+                    i += 1;
+                    tokens.push(Token::Operator(NotEqual));
+                } else {
+                    tokens.push(Token::Operator(LogicalNegation));
+                }
+            }
             '~' => tokens.push(Token::Operator(BitwiseComplement)),
+            '&' => {
+                if input.get(i+1) == Some(&'&') {
+                    i += 1;
+                    tokens.push(Token::Operator(LogicalAnd));
+                } else {
+                    panic!("Bitwise AND not implemented yet");
+                }
+            }
+            '|' => {
+                if input.get(i+1) == Some(&'|') {
+                    i += 1;
+                    tokens.push(Token::Operator(LogicalOr));
+                } else {
+                    panic!("Bitwise Or not implemented yet");
+                }
+            }
+            '=' => {
+                if input.get(i+1) == Some(&'=') {
+                    i += 1;
+                    tokens.push(Token::Operator(Equal));
+                } else {
+                    panic!("Assignment not implemented yet");
+                }
+            }
+            '<' => {
+                if input.get(i+1) == Some(&'=') {
+                    i += 1;
+                    tokens.push(Token::Operator(LessThanOrEqual));
+                } else {
+                    tokens.push(Token::Operator(LessThan));
+                }
+            }
+            '>' => {
+                if input.get(i+1) == Some(&'=') {
+                    i += 1;
+                    tokens.push(Token::Operator(GreaterThanOrEqual));
+                } else {
+                    tokens.push(Token::Operator(GreaterThan));
+                }
+            }
             c => {
                 if c.is_alphabetic() {
                     let mut s = c.to_string();

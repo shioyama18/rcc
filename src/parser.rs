@@ -15,13 +15,17 @@ pub enum FunctionDeclaration {
 #[derive(Debug)]
 pub enum Statement {
     Return(Expression),
+    Declare(String, Option<Expression>),
+    Expression(Expression),
 }
 
 #[derive(Debug)]
 pub enum Expression {
+    Assign(String, Box<Expression>),
     UnaryOp(Operator, Box<Expression>),
     BinaryOp(Operator, Box<Expression>, Box<Expression>),
     Constant(i32),
+    Variable(String),
 }
 
 pub fn parse(tokens: &[Token]) -> Program {
@@ -80,7 +84,22 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             tokens.next();
             statement = Statement::Return(parse_expression(tokens));
         }
-        _ => panic!("Expected return statement"),
+        Some(Token::Keyword(Keyword::Int)) => {
+            tokens.next();
+            match tokens.next() {
+                Some(Token::Identifier(id)) => {
+                    if let Some(&&Token::Operator(Operator::Assignment)) = tokens.peek_nth(0) {
+                        tokens.next();
+                        statement = Statement::Declare(id.clone(), Some(parse_expression(tokens)));
+                    } else {
+                        statement = Statement::Declare(id.clone(), None);
+                    }
+                }
+                _ => panic!("Expected identifier"),
+            }
+        }
+        None => panic!("Expected statement"),
+        _ => statement = Statement::Expression(parse_expression(tokens)),
     }
 
     match tokens.next() {
@@ -90,8 +109,19 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
 }
 
 fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
-    // Call expression of lowest precedence
-    parse_logical_or_expression(tokens)
+    match tokens.peek_nth(0) {
+        Some(Token::Identifier(id)) => {
+            match tokens.peek_nth(1) {
+                Some(Token::Operator(op)) if op == &Operator::Assignment => {
+                    tokens.next(); // id
+                    tokens.next(); // =
+                    return Expression::Assign(id.clone(), Box::new(parse_expression(tokens)));
+                }
+                _ => parse_logical_or_expression(tokens),
+            }
+        }
+        _ => parse_logical_or_expression(tokens),
+    }
 }
 
 /// TODO: Make all binary operation a macro
@@ -218,6 +248,9 @@ fn parse_factor(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
         }
         Some(Token::Constant(c)) => {
             return Expression::Constant(*c);
+        }
+        Some(Token::Identifier(id)) => {
+            return Expression::Variable(id.clone());
         }
         _ => panic!("Unexpected token"),
     }

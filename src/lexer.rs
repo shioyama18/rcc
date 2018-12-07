@@ -38,6 +38,7 @@ pub enum Operator {
     LessThanOrEqual,      // <=
     GreaterThan,          // >
     GreaterThanOrEqual,   // >=
+    Assignment,           // =
 }
 
 impl Operator {
@@ -102,7 +103,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     i += 1;
                     tokens.push(Token::Operator(Equal));
                 } else {
-                    panic!("Assignment not implemented yet");
+                    tokens.push(Token::Operator(Assignment));
                 }
             }
             '<' => {

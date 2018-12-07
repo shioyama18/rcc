@@ -24,8 +24,9 @@ fn main() {
         }
     };
     // println!("{:#?}", tokens);
+
     let ast = parse(&tokens);
-    //println!("{:#?}", ast);
+    // println!("{:#?}", ast);
 
     let generated = generate(&ast);
     println!("{}", generated);

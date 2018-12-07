@@ -1,43 +1,77 @@
+use std::collections::HashMap;
+
 use lexer::*;
 use parser::*;
 
-pub fn generate(ast: &Program) -> String {
-    println!(".intel_syntax noprefix");
-    println!(".global main");
-    println!("main:");
+type VariableMap = HashMap<String, isize>;
 
+pub fn generate(ast: &Program) -> String {
     let mut output = String::new();
+    output.push_str(".intel_syntax noprefix\n");
 
     match ast {
-        Program::Program(FunctionDeclaration::Function(_name, statements)) => {
+        Program::Program(FunctionDeclaration::Function(name, statements)) => {
+            let mut var_map = VariableMap::new();
+            let mut stack_index: isize = -8;
+
+            output.push_str(&format!(".global {}\n", name));
+            output.push_str(&format!("{}:\n", name));
+
+            output.push_str("  push rbp\n");
+            output.push_str("  mov rbp, rsp\n");
+
             for s in statements {
-                output.push_str(&generate_statement(s))
+                output.push_str(&generate_statement(s, &mut var_map, &mut stack_index));
             }
 
-            output.push_str("  ret\n");
+            if output.ends_with(&format!("  ret\n")) {
+                return output;
+            } else {
+                output.push_str("  mov rax, 0\n");
+                generate_function_epilogue(&mut output);
+            }
         }
     }
 
     output
 }
 
-fn generate_statement(statement: &Statement) -> String {
+fn generate_statement(statement: &Statement, var_map: &mut VariableMap, stack_index: &mut isize) -> String {
     let mut output = String::new();
 
     match statement {
         Statement::Return(expr) => {
-            output.push_str(&generate_expression(expr));
+            output.push_str(&generate_expression(expr, var_map, stack_index));
+            generate_function_epilogue(&mut output);
+        }
+        Statement::Declare(name, value) => {
+            if var_map.contains_key(name) {
+                panic!("Variable {} declared twice in same scope", name);
+            }
+
+            if let Some(expr) = value {
+                output.push_str(&generate_expression(expr, var_map, stack_index));
+                output.push_str("  push rax\n");
+            } else {
+                output.push_str("  push 0\n");
+            }
+
+            var_map.insert(name.clone(), *stack_index);
+            *stack_index -= 8;
+        }
+        Statement::Expression(expr) => {
+            output.push_str(&generate_expression(expr, var_map, stack_index));
         }
     }
 
     output
 }
 
-fn generate_expression(expression: &Expression) -> String {
+fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_index: &isize) -> String {
     match expression {
         Expression::Constant(n) => format!("  mov rax, {}\n", n),
         Expression::UnaryOp(op, expr) => {
-            let mut generated = generate_expression(expr);
+            let mut generated = generate_expression(expr, var_map, stack_index);
 
             match op {
                 Operator::Minus => {
@@ -58,14 +92,13 @@ fn generate_expression(expression: &Expression) -> String {
             return generated;
         }
         Expression::BinaryOp(op, lhs, rhs) => {
-            let mut generated: String;
+            let mut generated = generate_expression(rhs, var_map, stack_index);
+            generated.push_str("  push rax\n");
+            generated.push_str(&generate_expression(lhs, var_map, stack_index));
+            generated.push_str("  pop rdi\n");
+
             match op {
                 Operator::Plus | Operator::Minus | Operator::Multiplication | Operator::Division => {
-                    generated = generate_expression(rhs);
-                    generated.push_str("  push rax\n");
-                    generated.push_str(&generate_expression(lhs));
-                    generated.push_str("  pop rdi\n");
-
                     match op {
                         Operator::Plus => generated.push_str("  add rax, rdi\n"),
                         Operator::Minus => generated.push_str("  sub rax, rdi\n"),
@@ -81,11 +114,6 @@ fn generate_expression(expression: &Expression) -> String {
                 Operator::Equal | Operator::NotEqual | 
                 Operator::LessThan | Operator::LessThanOrEqual | 
                 Operator::GreaterThan | Operator::GreaterThanOrEqual => {
-                    generated = generate_expression(rhs);
-                    generated.push_str("  push rax\n");
-                    generated.push_str(&generate_expression(lhs));
-                    generated.push_str("  pop rdi\n");
-
                     generated.push_str("  cmp rax, rdi\n");
                     match op {
                         Operator::Equal => generated.push_str("  sete al\n"),
@@ -100,11 +128,6 @@ fn generate_expression(expression: &Expression) -> String {
                     return generated;
                 }
                 Operator::LogicalOr | Operator::LogicalAnd => {
-                    generated = generate_expression(rhs);
-                    generated.push_str("  push rax\n");
-                    generated.push_str(&generate_expression(lhs));
-                    generated.push_str("  pop rdi\n");
-                    
                     match op {
                         Operator::LogicalOr => {
                             generated.push_str("  or rdi, rax\n");
@@ -127,5 +150,32 @@ fn generate_expression(expression: &Expression) -> String {
                 _ => panic!("Unexpected binary operator"),
             }
         }
+        Expression::Assign(name, expr) => {
+            let mut generated = generate_expression(expr, var_map, stack_index);
+            
+            if !var_map.contains_key(name) {
+                panic!("Variable undeclared");
+            } else {
+                let offset: isize = *var_map.get(name).expect("Missing offset");
+                generated.push_str(&format!("  mov [rbp{}], rax\n", offset));
+            }
+
+            return generated;
+        }
+        Expression::Variable(name) => {
+            if !var_map.contains_key(name) {
+                panic!("Variable undeclared");
+            } else {
+                let offset: isize = *var_map.get(name).expect("Missing offset");
+                return format!("  mov rax, [rbp{}]\n", offset);
+            }
+        }
     }
 }
+
+fn generate_function_epilogue(output: &mut String) {
+    output.push_str("  mov rsp, rbp\n");
+    output.push_str("  pop rbp\n");
+    output.push_str("  ret\n");
+}
+

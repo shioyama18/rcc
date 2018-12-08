@@ -5,10 +5,10 @@ use token::*;
 use ast::*;
 
 pub fn parse(tokens: &[Token]) -> Program {
-    parse_main(&mut tokens.iter().peekable_nth())
+    parse_function(&mut tokens.iter().peekable_nth())
 }
 
-fn parse_main(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
+fn parse_function(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
     match tokens.next() {
         Some(token) => {
             match token {
@@ -21,14 +21,15 @@ fn parse_main(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
                                         Some(Token::Punctuation(Punctuation::CloseParen)) => {
                                             match tokens.next() {
                                                 Some(Token::Punctuation(Punctuation::OpenBrace)) => {
-                                                    let mut statements = Vec::new();
+                                                    let mut block = Vec::new();
+
                                                     while tokens.peek_nth(0) != Some(&&Token::Punctuation(Punctuation::CloseBrace)) {
-                                                        statements.push(parse_statement(tokens));
+                                                        block.push(parse_block_item(tokens));
                                                     }
 
                                                     match tokens.next() {
                                                         Some(Token::Punctuation(Punctuation::CloseBrace)) => {
-                                                            return Program::Program(FunctionDeclaration::Function(id.to_string(), statements));
+                                                            return Program::Program(FunctionDeclaration::Function(id.to_string(), block));
                                                         }
                                                         _ => panic!("Expected closing braces"),
                                                     }
@@ -52,6 +53,70 @@ fn parse_main(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
     }
 }
 
+// fn parse_block(tokens: &mut PeekableNth<Iter<Token>>) -> Block {
+//     println!("Start parse_block");
+//     let mut block = Vec::new();
+    
+//     match tokens.next() {
+//         Some(Token::Punctuation(Punctuation::OpenBrace)) => {
+//             loop {
+//                 block.push(parse_block_item(tokens));
+//                 match tokens.next() {
+//                     Some(Token::Punctuation(Punctuation::CloseBrace)) => {
+//                         break;
+//                     }
+//                     _ => block.push(parse_block_item(tokens)),
+//                 }
+//             }
+//         }
+//         _ => panic!("Expected opening braces at start of block"),
+//     }
+
+//     match tokens.next() {
+//         Some(Token::Punctuation(Punctuation::CloseBrace)) => return block,
+//         _ => panic!("Expected closing braces at end of block: {:?}", tokens),
+//     }
+// }
+
+fn parse_block_item(tokens: &mut PeekableNth<Iter<Token>>) -> BlockItem {
+    let block_item: BlockItem;
+
+    match tokens.peek_nth(0) {
+        Some(Token::Keyword(Keyword::Int)) => block_item = BlockItem::Declaration(parse_declaration(tokens)),
+        Some(_) => block_item = BlockItem::Statement(parse_statement(tokens)),
+        None => panic!("Expected block"),
+    }
+
+    return block_item;
+}
+
+fn parse_declaration(tokens: &mut PeekableNth<Iter<Token>>) -> Declaration {
+    let declaration: Declaration;
+
+    match tokens.peek_nth(0) {
+        Some(Token::Keyword(Keyword::Int)) => {
+            tokens.next();
+            match tokens.next() {
+                Some(Token::Identifier(id)) => {
+                    if let Some(&&Token::Operator(Operator::Assignment)) = tokens.peek_nth(0) {
+                        tokens.next();
+                        declaration = Declaration::Declare(id.clone(), Some(parse_expression(tokens)));
+                    } else {
+                        declaration = Declaration::Declare(id.clone(), None);
+                    }
+                }
+                _ => panic!("Expected identifier"),
+            }
+        }
+        _ => panic!("Expected int keyword"),
+    }
+
+    match tokens.next() {
+        Some(Token::Punctuation(Punctuation::Semicolon)) => return declaration,
+        _ => panic!("Expected semicolon at the end of declaration: {:?}", tokens),
+    }
+}
+
 fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
     let statement: Statement;
 
@@ -60,20 +125,10 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             tokens.next();
             statement = Statement::Return(parse_expression(tokens));
         }
-        Some(Token::Keyword(Keyword::Int)) => {
+        Some(Token::Keyword(Keyword::If)) => {
             tokens.next();
-            match tokens.next() {
-                Some(Token::Identifier(id)) => {
-                    if let Some(&&Token::Operator(Operator::Assignment)) = tokens.peek_nth(0) {
-                        tokens.next();
-                        statement = Statement::Declare(id.clone(), Some(parse_expression(tokens)));
-                    } else {
-                        statement = Statement::Declare(id.clone(), None);
-                    }
-                }
-                _ => panic!("Expected identifier"),
-            }
-        }
+            return parse_if_statement(tokens);
+        } 
         None => panic!("Expected statement"),
         _ => statement = Statement::Expression(parse_expression(tokens)),
     }
@@ -84,6 +139,29 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
     }
 }
 
+fn parse_if_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
+    match tokens.next() {
+        Some(Token::Punctuation(Punctuation::OpenParen)) => {
+            let controlling_condition = parse_expression(tokens);
+            match tokens.next() {
+                Some(Token::Punctuation(Punctuation::CloseParen)) => {
+                    let next_statement = parse_statement(tokens);
+                    match tokens.peek_nth(0) {
+                        Some(Token::Keyword(Keyword::Else)) => {
+                            tokens.next();
+                            let else_statement = parse_statement(tokens);
+                            return Statement::Conditional(controlling_condition, Box::new(next_statement), Some(Box::new(else_statement)));
+                        }
+                        _ => return Statement::Conditional(controlling_condition, Box::new(next_statement), None),
+                    }
+                }
+                _ => panic!("Expected closing parenthesis"),
+            }
+        }
+        _ => panic!("Expected opening parenthesis"),
+    }
+}
+
 fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
     match tokens.peek_nth(0) {
         Some(Token::Identifier(id)) => {
@@ -91,16 +169,37 @@ fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
                 Some(Token::Operator(op)) if op == &Operator::Assignment => {
                     tokens.next(); // id
                     tokens.next(); // =
-                    return Expression::Assign(*op, id.clone(), Box::new(parse_expression(tokens)));
+                    return Expression::AssignOp(*op, id.clone(), Box::new(parse_expression(tokens)));
                 }
-                _ => parse_logical_or_expression(tokens),
+                _ => parse_conditional_expression(tokens),
             }
         }
-        _ => parse_logical_or_expression(tokens),
+        _ => parse_conditional_expression(tokens),
     }
 }
 
-/// TODO: Make all binary operation a macro
+fn parse_conditional_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    let mut expression = parse_logical_or_expression(tokens);
+    
+    loop {
+        match tokens.peek_nth(0) {
+            Some(Token::Punctuation(Punctuation::QuestionMark)) => {
+                tokens.next();
+                let true_expression = parse_expression(tokens);
+                match tokens.next() {
+                    Some(Token::Punctuation(Punctuation::Colon)) => {
+                        let false_expression = parse_expression(tokens);
+                        expression = Expression::TernaryOp(Box::new(expression), Box::new(true_expression), Box::new(false_expression));
+                    }
+                    _ => panic!("Expected colon"),
+                }
+            }
+            _ => break,
+        }
+    }
+
+    return expression;
+}
 
 fn parse_logical_or_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
     let mut expression = parse_logical_and_expression(tokens);

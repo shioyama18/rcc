@@ -10,6 +10,7 @@ use rcc::parser::*;
 use rcc::generator::*;
 
 fn main() {
+    // TODO: use clap for command line arguments
     let args = std::env::args().skip(1).collect::<Vec<_>>();
     if args.len() != 1 {
         eprintln!("Error: Invalid number of arguments");

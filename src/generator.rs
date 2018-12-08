@@ -10,7 +10,7 @@ pub fn generate(ast: &Program) -> String {
     output.push_str(".intel_syntax noprefix\n");
 
     match ast {
-        Program::Program(FunctionDeclaration::Function(name, statements)) => {
+        Program::Program(FunctionDeclaration::Function(name, blocks)) => {
             let mut var_map = VariableMap::new();
             let mut stack_index: isize = -8;
 
@@ -20,8 +20,8 @@ pub fn generate(ast: &Program) -> String {
             output.push_str("  push rbp\n");
             output.push_str("  mov rbp, rsp\n");
 
-            for s in statements {
-                output.push_str(&generate_statement(s, &mut var_map, &mut stack_index));
+            for block in blocks {
+                output.push_str(&generate_block(block, &mut var_map, &mut stack_index));
             }
 
             if output.ends_with(&format!("  ret\n")) {
@@ -36,15 +36,22 @@ pub fn generate(ast: &Program) -> String {
     output
 }
 
-fn generate_statement(statement: &Statement, var_map: &mut VariableMap, stack_index: &mut isize) -> String {
+fn generate_block(block: &BlockItem, var_map: &mut VariableMap, stack_index: &mut isize) -> String {
     let mut output = String::new();
 
-    match statement {
-        Statement::Return(expr) => {
-            output.push_str(&generate_expression(expr, var_map, stack_index));
-            generate_function_epilogue(&mut output);
-        }
-        Statement::Declare(name, value) => {
+    match block {
+        BlockItem::Declaration(declaration) => output.push_str(&generate_declaration(declaration, var_map, stack_index)),
+        BlockItem::Statement(statement) => output.push_str(&generate_statement(statement, var_map, stack_index)),
+    }
+
+    return output;
+}
+
+fn generate_declaration(declaration: &Declaration, var_map: &mut VariableMap, stack_index: &mut isize) -> String {
+    let mut output = String::new();
+
+    match declaration {
+        Declaration::Declare(name, value) => {
             if var_map.contains_key(name) {
                 panic!("Variable {} declared twice in same scope", name);
             }
@@ -59,12 +66,35 @@ fn generate_statement(statement: &Statement, var_map: &mut VariableMap, stack_in
             var_map.insert(name.clone(), *stack_index);
             *stack_index -= 8;
         }
+    }
+
+    return output;
+}
+
+fn generate_statement(statement: &Statement, var_map: &mut VariableMap, stack_index: &mut isize) -> String {
+    let mut output = String::new();
+
+    match statement {
+        Statement::Return(expr) => {
+            output.push_str(&generate_expression(expr, var_map, stack_index));
+            generate_function_epilogue(&mut output);
+        }
         Statement::Expression(expr) => {
             output.push_str(&generate_expression(expr, var_map, stack_index));
         }
+        Statement::Conditional(expr, true_statement, false_statement) => {
+            // call generate_if_statement
+        }
+        _ => unimplemented!("if not implemented yet"),
     }
 
-    output
+    return output;
+}
+
+fn generate_if_statement(statement: &Statement, var_map: &mut VariableMap, stack_index: &mut isize) -> String {
+    let mut output = String::new();
+
+    return output;
 }
 
 fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_index: &isize) -> String {
@@ -150,7 +180,8 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                 _ => panic!("Unexpected binary operator"),
             }
         }
-        Expression::Assign(_op, name, expr) => {
+        Expression::AssignOp(_op, name, expr) => {
+            // TODO: implement compound assignment operators
             let mut generated = generate_expression(expr, var_map, stack_index);
             
             if !var_map.contains_key(name) {
@@ -170,6 +201,11 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                 return format!("  mov rax, [rbp{}]\n", offset);
             }
         }
+        Expression::TernaryOp(_, _, _) => {
+            // Implement ternary operator
+            return String::new();
+        }
+        _ => unimplemented!(),
     }
 }
 

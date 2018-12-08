@@ -16,6 +16,8 @@ pub fn lex(input: &str) -> Vec<Token> {
             '{' => tokens.push(Token::Punctuation(OpenBrace)),
             '}' => tokens.push(Token::Punctuation(CloseBrace)),
             ';' => tokens.push(Token::Punctuation(Semicolon)),
+            ':' => tokens.push(Token::Punctuation(Colon)),
+            '?' => tokens.push(Token::Punctuation(QuestionMark)),
             '+' => tokens.push(Token::Operator(Plus)),
             '-' => tokens.push(Token::Operator(Minus)),
             '*' => tokens.push(Token::Operator(Multiplication)),
@@ -82,6 +84,8 @@ pub fn lex(input: &str) -> Vec<Token> {
                     match &s[..] {
                         "int" => tokens.push(Token::Keyword(Int)),
                         "return" => tokens.push(Token::Keyword(Return)),
+                        "if" => tokens.push(Token::Keyword(If)),
+                        "else" => tokens.push(Token::Keyword(Else)),
                         _ => tokens.push(Token::Identifier(s)),
                     }
                     

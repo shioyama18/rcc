@@ -11,6 +11,8 @@ pub enum Token {
 pub enum Keyword {
     Int,
     Return,
+    If,
+    Else,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -20,6 +22,8 @@ pub enum Punctuation {
     OpenBrace,
     CloseBrace,
     Semicolon,
+    Colon,
+    QuestionMark,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

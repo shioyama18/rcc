@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
-use lexer::*;
-use parser::*;
+use ast::*;
 
 type VariableMap = HashMap<String, isize>;
 

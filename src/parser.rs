@@ -1,32 +1,7 @@
 use std::slice::Iter;
 use peek_nth::{PeekableNth, IteratorExt};
 
-use lexer::*;
-
-#[derive(Debug)]
-pub enum Program {
-    Program(FunctionDeclaration),
-}
-#[derive(Debug)]
-pub enum FunctionDeclaration {
-    Function(String, Vec<Statement>),
-}
-
-#[derive(Debug)]
-pub enum Statement {
-    Return(Expression),
-    Declare(String, Option<Expression>),
-    Expression(Expression),
-}
-
-#[derive(Debug)]
-pub enum Expression {
-    Assign(String, Box<Expression>),
-    UnaryOp(Operator, Box<Expression>),
-    BinaryOp(Operator, Box<Expression>, Box<Expression>),
-    Constant(i32),
-    Variable(String),
-}
+use ast::*;
 
 pub fn parse(tokens: &[Token]) -> Program {
     parse_main(&mut tokens.iter().peekable_nth())

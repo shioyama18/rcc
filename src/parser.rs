@@ -1,6 +1,7 @@
 use std::slice::Iter;
 use peek_nth::{PeekableNth, IteratorExt};
 
+use token::*;
 use ast::*;
 
 pub fn parse(tokens: &[Token]) -> Program {
@@ -90,7 +91,7 @@ fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
                 Some(Token::Operator(op)) if op == &Operator::Assignment => {
                     tokens.next(); // id
                     tokens.next(); // =
-                    return Expression::Assign(id.clone(), Box::new(parse_expression(tokens)));
+                    return Expression::Assign(*op, id.clone(), Box::new(parse_expression(tokens)));
                 }
                 _ => parse_logical_or_expression(tokens),
             }

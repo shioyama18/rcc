@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use token::*;
 use ast::*;
 
 type VariableMap = HashMap<String, isize>;
@@ -149,7 +150,7 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                 _ => panic!("Unexpected binary operator"),
             }
         }
-        Expression::Assign(name, expr) => {
+        Expression::Assign(_op, name, expr) => {
             let mut generated = generate_expression(expr, var_map, stack_index);
             
             if !var_map.contains_key(name) {

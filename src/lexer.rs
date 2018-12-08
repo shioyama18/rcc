@@ -1,7 +1,7 @@
-use ast::*;
-use ast::Operator::*;
-use ast::Keyword::*;
-use ast::Punctuation::*;
+use token::*;
+use token::Operator::*;
+use token::Keyword::*;
+use token::Punctuation::*;
 
 pub fn lex(input: &str) -> Vec<Token> {
     let input = input.chars().collect::<Vec<_>>();

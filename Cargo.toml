@@ -5,3 +5,4 @@ authors = ["Shion Yamashita <shioyama1118@gmail.com>"]
 
 [dependencies]
 peek-nth = "0.2.0"
+rand = "0.6.1"

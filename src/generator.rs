@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use util::*;
 use token::*;
 use ast::*;
 
@@ -82,17 +83,29 @@ fn generate_statement(statement: &Statement, var_map: &mut VariableMap, stack_in
         Statement::Expression(expr) => {
             output.push_str(&generate_expression(expr, var_map, stack_index));
         }
-        Statement::Conditional(expr, true_statement, false_statement) => {
-            // call generate_if_statement
+        Statement::Conditional(expr, if_body, else_body) => {
+            let post_if_label = unique("post_if_");
+
+            output.push_str(&generate_expression(expr, var_map, stack_index));
+            output.push_str("  cmp rax, 0\n");
+            output.push_str(&format!("  je {}\n", post_if_label));
+            output.push_str(&generate_statement(if_body, var_map, stack_index));
+
+            if let Some(else_statement) = else_body {
+                let post_else_label = unique("post_else_");
+                output.push_str(&format!("  jmp {}\n", post_else_label));
+                
+                output.push_str(&format!("{}:\n", post_if_label));
+                output.push_str(&generate_statement(else_statement, var_map, stack_index));
+                
+                output.push_str(&format!("{}:\n", post_else_label));
+            } else {
+                output.push_str(&format!("{}:\n", post_if_label));
+            }
+
+            return output;
         }
-        _ => unimplemented!("if not implemented yet"),
     }
-
-    return output;
-}
-
-fn generate_if_statement(statement: &Statement, var_map: &mut VariableMap, stack_index: &mut isize) -> String {
-    let mut output = String::new();
 
     return output;
 }
@@ -101,97 +114,97 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
     match expression {
         Expression::Constant(n) => format!("  mov rax, {}\n", n),
         Expression::UnaryOp(op, expr) => {
-            let mut generated = generate_expression(expr, var_map, stack_index);
+            let mut output = generate_expression(expr, var_map, stack_index);
 
             match op {
                 Operator::Minus => {
-                    generated.push_str("  neg rax\n");
+                    output.push_str("  neg rax\n");
                 }
                 Operator::BitwiseComplement => {
-                    generated.push_str("  not rax\n");
+                    output.push_str("  not rax\n");
                 }
                 Operator::LogicalNegation => {
-                    generated.push_str("  mov rdi, 0\n");
-                    generated.push_str("  cmp rdi, rax\n");
-                    generated.push_str("  sete al\n");
-                    generated.push_str("  movzb rax, al\n");
+                    output.push_str("  mov rdi, 0\n");
+                    output.push_str("  cmp rdi, rax\n");
+                    output.push_str("  sete al\n");
+                    output.push_str("  movzb rax, al\n");
                 }
                 _ => panic!("Unexpected unary operator"),
             }
 
-            return generated;
+            return output;
         }
         Expression::BinaryOp(op, lhs, rhs) => {
-            let mut generated = generate_expression(rhs, var_map, stack_index);
-            generated.push_str("  push rax\n");
-            generated.push_str(&generate_expression(lhs, var_map, stack_index));
-            generated.push_str("  pop rdi\n");
+            let mut output = generate_expression(rhs, var_map, stack_index);
+            output.push_str("  push rax\n");
+            output.push_str(&generate_expression(lhs, var_map, stack_index));
+            output.push_str("  pop rdi\n");
 
             match op {
                 Operator::Plus | Operator::Minus | Operator::Multiplication | Operator::Division => {
                     match op {
-                        Operator::Plus => generated.push_str("  add rax, rdi\n"),
-                        Operator::Minus => generated.push_str("  sub rax, rdi\n"),
-                        Operator::Multiplication => generated.push_str("  mul rdi\n"),
+                        Operator::Plus => output.push_str("  add rax, rdi\n"),
+                        Operator::Minus => output.push_str("  sub rax, rdi\n"),
+                        Operator::Multiplication => output.push_str("  mul rdi\n"),
                         Operator::Division => {
-                            generated.push_str("  mov rdx, 0\n");
-                            generated.push_str("  div rdi\n");
+                            output.push_str("  mov rdx, 0\n");
+                            output.push_str("  div rdi\n");
                         }
                         _ => panic!("Unexpected binary operator"),
                     }
-                    return generated;
+                    return output;
                 }
                 Operator::Equal | Operator::NotEqual | 
                 Operator::LessThan | Operator::LessThanOrEqual | 
                 Operator::GreaterThan | Operator::GreaterThanOrEqual => {
-                    generated.push_str("  cmp rax, rdi\n");
+                    output.push_str("  cmp rax, rdi\n");
                     match op {
-                        Operator::Equal => generated.push_str("  sete al\n"),
-                        Operator::NotEqual => generated.push_str("  setne al\n"),
-                        Operator::LessThan => generated.push_str("  setl al\n"),
-                        Operator::LessThanOrEqual => generated.push_str("  setle al\n"),
-                        Operator::GreaterThan => generated.push_str("  setg al\n"),
-                        Operator::GreaterThanOrEqual => generated.push_str("  setge al\n"),
+                        Operator::Equal => output.push_str("  sete al\n"),
+                        Operator::NotEqual => output.push_str("  setne al\n"),
+                        Operator::LessThan => output.push_str("  setl al\n"),
+                        Operator::LessThanOrEqual => output.push_str("  setle al\n"),
+                        Operator::GreaterThan => output.push_str("  setg al\n"),
+                        Operator::GreaterThanOrEqual => output.push_str("  setge al\n"),
                         _ => panic!("Unexpected relational operator"),
                     }
-                    generated.push_str("  movzb rax, al\n");
-                    return generated;
+                    output.push_str("  movzb rax, al\n");
+                    return output;
                 }
                 Operator::LogicalOr | Operator::LogicalAnd => {
                     match op {
                         Operator::LogicalOr => {
-                            generated.push_str("  or rdi, rax\n");
-                            generated.push_str("  setne al\n");
-                            generated.push_str("  movzb rax, al\n");
+                            output.push_str("  or rdi, rax\n");
+                            output.push_str("  setne al\n");
+                            output.push_str("  movzb rax, al\n");
                         }
                         Operator::LogicalAnd => {
-                            generated.push_str("  cmp rdi, 0\n");
-                            generated.push_str("  setne dil\n");
-                            generated.push_str("  cmp rax, 0\n");
-                            generated.push_str("  setne al\n");
-                            generated.push_str("  movzb rax, al\n");
-                            generated.push_str("  and al, dil\n");
+                            output.push_str("  cmp rdi, 0\n");
+                            output.push_str("  setne dil\n");
+                            output.push_str("  cmp rax, 0\n");
+                            output.push_str("  setne al\n");
+                            output.push_str("  movzb rax, al\n");
+                            output.push_str("  and al, dil\n");
                         }
                         _ => panic!("Unexpected logical binary operator"),
                     }
                     
-                    return generated;
+                    return output;
                 }
                 _ => panic!("Unexpected binary operator"),
             }
         }
         Expression::AssignOp(_op, name, expr) => {
             // TODO: implement compound assignment operators
-            let mut generated = generate_expression(expr, var_map, stack_index);
+            let mut output = generate_expression(expr, var_map, stack_index);
             
             if !var_map.contains_key(name) {
                 panic!("Variable undeclared");
             } else {
                 let offset: isize = *var_map.get(name).expect("Missing offset");
-                generated.push_str(&format!("  mov [rbp{}], rax\n", offset));
+                output.push_str(&format!("  mov [rbp{}], rax\n", offset));
             }
 
-            return generated;
+            return output;
         }
         Expression::Variable(name) => {
             if !var_map.contains_key(name) {
@@ -201,11 +214,23 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                 return format!("  mov rax, [rbp{}]\n", offset);
             }
         }
-        Expression::TernaryOp(_, _, _) => {
-            // Implement ternary operator
-            return String::new();
+        Expression::TernaryOp(e1, e2, e3) => {
+            let mut output = generate_expression(e1, var_map, stack_index);
+            output.push_str("  cmp rax, 0\n");
+
+            let e_label = unique("e_");
+            output.push_str(&format!("  je {}\n", e_label));
+            
+            output.push_str(&generate_expression(e2, var_map, stack_index));
+            let post_conditional_label = unique("post_conditional_");
+            output.push_str(&format!("  jmp {}\n", post_conditional_label));
+            
+            output.push_str(&format!("{}:\n", e_label));
+            output.push_str(&generate_expression(e3, var_map, stack_index));
+            
+            output.push_str(&format!("{}:\n", post_conditional_label));
+            return output;
         }
-        _ => unimplemented!(),
     }
 }
 

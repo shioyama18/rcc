@@ -1,5 +1,7 @@
 extern crate peek_nth;
+extern crate rand;
 
+pub mod util;
 pub mod token;
 pub mod ast;
 pub mod lexer;

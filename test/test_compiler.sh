@@ -29,6 +29,8 @@ test_stage () {
         rm a.out
 
         base="${prog%.*}" #name of executable (filename w/out extension)
+
+		// Modified the lines below to save my programs output to tmp.s
         $cmp $prog > tmp.s
 		gcc -o $base tmp.s
 		rm tmp.s

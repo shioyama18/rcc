@@ -1,34 +1,7 @@
-use std::collections::{HashSet, HashMap};
-
 use util::*;
 use token::*;
 use ast::*;
-
-#[derive(Debug, Clone)]
-struct Context { 
-    var_map: HashMap<String, isize>,
-    current_scope: HashSet<String>,
-    stack_index: isize,
-}
-
-impl Context {
-    fn new() -> Self {
-        Context {
-            var_map: HashMap::new(),
-            current_scope: HashSet::new(),
-            stack_index: -8,
-        }
-    }
-
-    fn reset_scope(&self) -> Self {
-        Context {
-            var_map: self.var_map.clone(),
-            current_scope: HashSet::new(),
-            stack_index: self.stack_index,
-        }
-    }
-}
-
+use context::*;
 
 pub fn generate(ast: &Program) {
     println!(".intel_syntax noprefix");
@@ -57,9 +30,6 @@ fn generate_function(name: &String, block: &Block) {
 
 fn generate_block(block: &Block, context: &Context) {
     let mut context = (*context).clone();
-    // let mut var_map = var_map.clone();
-    // let mut stack_index = stack_index.clone();
-    // let mut current_scope = var_map.keys().map(|var| var.to_string()).collect::<CurrentScope>();
 
     for block_item in block {
         match block_item {

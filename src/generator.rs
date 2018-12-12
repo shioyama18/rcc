@@ -1,10 +1,34 @@
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
 
 use util::*;
 use token::*;
 use ast::*;
 
-type VariableMap = HashMap<String, isize>;
+#[derive(Debug, Clone)]
+struct Context { 
+    var_map: HashMap<String, isize>,
+    current_scope: HashSet<String>,
+    stack_index: isize,
+}
+
+impl Context {
+    fn new() -> Self {
+        Context {
+            var_map: HashMap::new(),
+            current_scope: HashSet::new(),
+            stack_index: -8,
+        }
+    }
+
+    fn reset_scope(&self) -> Self {
+        Context {
+            var_map: self.var_map.clone(),
+            current_scope: HashSet::new(),
+            stack_index: self.stack_index,
+        }
+    }
+}
+
 
 pub fn generate(ast: &Program) {
     println!(".intel_syntax noprefix");
@@ -17,8 +41,7 @@ pub fn generate(ast: &Program) {
 }
 
 fn generate_function(name: &String, block: &Block) {
-    let mut var_map = VariableMap::new();
-    let mut stack_index: isize = -8;
+    let context = Context::new();
 
     println!(".global {}", name);
     println!("{}:", name);
@@ -26,64 +49,78 @@ fn generate_function(name: &String, block: &Block) {
     println!("  push rbp");
     println!("  mov rbp, rsp");
 
-    generate_block(block, &mut var_map, &mut stack_index);
+    generate_block(block, &context);
 
     println!("  mov rax, 0");
     generate_function_epilogue();
 }
 
-fn generate_block(block: &Block, var_map: &mut VariableMap, stack_index: &mut isize) {
+fn generate_block(block: &Block, context: &Context) {
+    let mut context = (*context).clone();
+    // let mut var_map = var_map.clone();
+    // let mut stack_index = stack_index.clone();
+    // let mut current_scope = var_map.keys().map(|var| var.to_string()).collect::<CurrentScope>();
+
     for block_item in block {
         match block_item {
-            BlockItem::Declaration(declaration) => generate_declaration(declaration, var_map, stack_index),
-            BlockItem::Statement(statement) => generate_statement(statement, var_map, stack_index),
+            BlockItem::Declaration(declaration) => {
+                generate_declaration(declaration, &mut context);
+            }
+            BlockItem::Statement(statement) => {
+                generate_statement(statement, &context);
+            }
         }
     }
+
+    let bytes_to_deallocate = 8 * context.current_scope.len();
+    println!("  add rsp, {}", bytes_to_deallocate);
 }
 
-fn generate_declaration(declaration: &Declaration, var_map: &mut VariableMap, stack_index: &mut isize) {
+fn generate_declaration(declaration: &Declaration, context: &mut Context) {
     match declaration {
         Declaration::Declare(name, value) => {
-            if var_map.contains_key(name) {
+            if context.current_scope.contains(name) {
                 panic!("Variable {} declared twice in same scope", name);
             }
 
             if let Some(expr) = value {
-                generate_expression(expr, var_map, stack_index);
+                generate_expression(expr, &context);
                 println!("  push rax");
             } else {
                 println!("  push 0");
             }
 
-            var_map.insert(name.clone(), *stack_index);
-            *stack_index -= 8;
+            context.var_map.insert(name.clone(), context.stack_index);
+            context.current_scope.insert(name.clone());
+            context.stack_index -= 8;
         }
     }
 }
 
-fn generate_statement(statement: &Statement, var_map: &mut VariableMap, stack_index: &mut isize) {
+fn generate_statement(statement: &Statement, context: &Context) {
+    let context = context.reset_scope();
     match statement {
         Statement::Return(expr) => {
-            generate_expression(expr, var_map, stack_index);
+            generate_expression(expr, &context);
             generate_function_epilogue();
         }
         Statement::Expression(expr) => {
-            generate_expression(expr, var_map, stack_index);
+            generate_expression(expr, &context);
         }
         Statement::Conditional(expr, if_body, else_body) => {
             let post_if_label = unique("post_if_");
 
-            generate_expression(expr, var_map, stack_index);
+            generate_expression(expr, &context);
             println!("  cmp rax, 0");
             println!("  je {}", post_if_label);
-            generate_statement(if_body, var_map, stack_index);
+            generate_statement(if_body, &context);
 
             if let Some(else_statement) = else_body {
                 let post_else_label = unique("post_else_");
                 println!("  jmp {}", post_else_label);
                 
                 println!("{}:", post_if_label);
-                generate_statement(else_statement, var_map, stack_index);
+                generate_statement(else_statement, &context);
                 
                 println!("{}:", post_else_label);
             } else {
@@ -91,16 +128,16 @@ fn generate_statement(statement: &Statement, var_map: &mut VariableMap, stack_in
             }
         }
         Statement::Compound(block) => {
-            generate_block(block, var_map, stack_index);
+            generate_block(block, &context);
         }
     }
 }
 
-fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_index: &isize) {
+fn generate_expression(expression: &Expression, context: &Context) {
     match expression {
         Expression::Constant(n) => println!("  mov rax, {}", n),
         Expression::UnaryOp(op, expr) => {
-            let mut output = generate_expression(expr, var_map, stack_index);
+            generate_expression(expr, context);
 
             match op {
                 Operator::Minus => {
@@ -117,13 +154,11 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                 }
                 _ => panic!("Unexpected unary operator"),
             }
-
-            return output;
         }
         Expression::BinaryOp(op, lhs, rhs) => {
-            let mut output = generate_expression(rhs, var_map, stack_index);
+            generate_expression(rhs, context);
             println!("  push rax");
-            generate_expression(lhs, var_map, stack_index);
+            generate_expression(lhs, context);
             println!("  pop rdi");
 
             match op {
@@ -138,7 +173,6 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                         }
                         _ => panic!("Unexpected binary operator"),
                     }
-                    return output;
                 }
                 Operator::Equal | Operator::NotEqual | 
                 Operator::LessThan | Operator::LessThanOrEqual | 
@@ -154,7 +188,6 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                         _ => panic!("Unexpected relational operator"),
                     }
                     println!("  movzb rax, al");
-                    return output;
                 }
                 Operator::LogicalOr | Operator::LogicalAnd => {
                     match op {
@@ -173,44 +206,42 @@ fn generate_expression(expression: &Expression, var_map: &VariableMap, stack_ind
                         }
                         _ => panic!("Unexpected logical binary operator"),
                     }
-                    
-                    return output;
                 }
                 _ => panic!("Unexpected binary operator"),
             }
         }
         Expression::AssignOp(_op, name, expr) => {
             // TODO: implement compound assignment operators
-            generate_expression(expr, var_map, stack_index);
+            generate_expression(expr, context);
             
-            if !var_map.contains_key(name) {
+            if !context.var_map.contains_key(name) {
                 panic!("Variable undeclared");
             } else {
-                let offset: isize = *var_map.get(name).expect("Missing offset");
+                let offset: isize = *context.var_map.get(name).expect("Missing offset");
                 println!("  mov [rbp{}], rax", offset);
             }
         }
         Expression::Variable(name) => {
-            if !var_map.contains_key(name) {
+            if !context.var_map.contains_key(name) {
                 panic!("Variable undeclared");
             } else {
-                let offset: isize = *var_map.get(name).expect("Missing offset");
+                let offset: isize = *context.var_map.get(name).expect("Missing offset");
                 println!("  mov rax, [rbp{}]", offset);
             }
         }
         Expression::TernaryOp(e1, e2, e3) => {
-            generate_expression(e1, var_map, stack_index);
+            generate_expression(e1, context); 
             println!("  cmp rax, 0");
 
             let e_label = unique("e_");
             println!("  je {}", e_label);
             
-            generate_expression(e2, var_map, stack_index);
+            generate_expression(e2, context);
             let post_conditional_label = unique("post_conditional_");
             println!("  jmp {}", post_conditional_label);
             
             println!("{}:", e_label);
-            generate_expression(e3, var_map, stack_index);
+            generate_expression(e3, context);
             
             println!("{}:", post_conditional_label);
         }

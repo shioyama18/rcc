@@ -23,7 +23,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             '*' => tokens.push(Token::Operator(Multiplication)),
             '/' => tokens.push(Token::Operator(Division)),
             '!' => {
-                if input.get(i+1) == Some(&'=') {
+                if let Some(&'=') = input.get(i+1) {
                     i += 1;
                     tokens.push(Token::Operator(NotEqual));
                 } else {
@@ -32,7 +32,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             }
             '~' => tokens.push(Token::Operator(BitwiseComplement)),
             '&' => {
-                if input.get(i+1) == Some(&'&') {
+                if let Some(&'&') = input.get(i+1) {
                     i += 1;
                     tokens.push(Token::Operator(LogicalAnd));
                 } else {
@@ -40,7 +40,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '|' => {
-                if input.get(i+1) == Some(&'|') {
+                if let Some(&'|') = input.get(i+1) {
                     i += 1;
                     tokens.push(Token::Operator(LogicalOr));
                 } else {
@@ -48,7 +48,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '=' => {
-                if input.get(i+1) == Some(&'=') {
+                if let Some(&'=') = input.get(i+1) {
                     i += 1;
                     tokens.push(Token::Operator(Equal));
                 } else {
@@ -56,7 +56,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '<' => {
-                if input.get(i+1) == Some(&'=') {
+                if let Some(&'=') = input.get(i+1) {
                     i += 1;
                     tokens.push(Token::Operator(LessThanOrEqual));
                 } else {
@@ -64,7 +64,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '>' => {
-                if input.get(i+1) == Some(&'=') {
+                if let Some(&'=') = input.get(i+1) {
                     i += 1;
                     tokens.push(Token::Operator(GreaterThanOrEqual));
                 } else {

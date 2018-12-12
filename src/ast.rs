@@ -22,7 +22,7 @@ pub enum Statement {
     Return(Expression),
     Expression(Expression),
     Conditional(Expression, Box<Statement>, Option<Box<Statement>>),
-    // Block(Block),
+    Compound(Block),
 }
 
 #[derive(Debug)]

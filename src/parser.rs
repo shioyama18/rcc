@@ -19,23 +19,8 @@ fn parse_function(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
                                 Some(Token::Punctuation(Punctuation::OpenParen)) => {
                                     match tokens.next() {
                                         Some(Token::Punctuation(Punctuation::CloseParen)) => {
-                                            match tokens.next() {
-                                                Some(Token::Punctuation(Punctuation::OpenBrace)) => {
-                                                    let mut block = Vec::new();
-
-                                                    while tokens.peek_nth(0) != Some(&&Token::Punctuation(Punctuation::CloseBrace)) {
-                                                        block.push(parse_block_item(tokens));
-                                                    }
-
-                                                    match tokens.next() {
-                                                        Some(Token::Punctuation(Punctuation::CloseBrace)) => {
-                                                            return Program::Program(FunctionDeclaration::Function(id.to_string(), block));
-                                                        }
-                                                        _ => panic!("Expected closing braces"),
-                                                    }
-                                                }
-                                                _ => panic!("Expected opening braces"),
-                                            }
+                                            let block = parse_block(tokens);
+                                            return Program::Program(FunctionDeclaration::Function(id.clone(), block));
                                         }
                                         _ => panic!("Expected closing parenthesis"),
                                     }
@@ -53,35 +38,28 @@ fn parse_function(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
     }
 }
 
-// fn parse_block(tokens: &mut PeekableNth<Iter<Token>>) -> Block {
-//     println!("Start parse_block");
-//     let mut block = Vec::new();
+fn parse_block(tokens: &mut PeekableNth<Iter<Token>>) -> Block {
+    let mut block = Vec::new();
     
-//     match tokens.next() {
-//         Some(Token::Punctuation(Punctuation::OpenBrace)) => {
-//             loop {
-//                 block.push(parse_block_item(tokens));
-//                 match tokens.next() {
-//                     Some(Token::Punctuation(Punctuation::CloseBrace)) => {
-//                         break;
-//                     }
-//                     _ => block.push(parse_block_item(tokens)),
-//                 }
-//             }
-//         }
-//         _ => panic!("Expected opening braces at start of block"),
-//     }
+    match tokens.next() {
+        Some(Token::Punctuation(Punctuation::OpenBrace)) => {
+            while tokens.peek() != Some(&&Token::Punctuation(Punctuation::CloseBrace)) {
+                block.push(parse_block_item(tokens));
+            }
+        }
+        _ => panic!("Expected opening braces at start of block"),
+    }
 
-//     match tokens.next() {
-//         Some(Token::Punctuation(Punctuation::CloseBrace)) => return block,
-//         _ => panic!("Expected closing braces at end of block: {:?}", tokens),
-//     }
-// }
+    match tokens.next() {
+        Some(Token::Punctuation(Punctuation::CloseBrace)) => return block,
+        _ => panic!("Expected closing braces at end of block: {:?}", tokens),
+    }
+}
 
 fn parse_block_item(tokens: &mut PeekableNth<Iter<Token>>) -> BlockItem {
     let block_item: BlockItem;
 
-    match tokens.peek_nth(0) {
+    match tokens.peek() {
         Some(Token::Keyword(Keyword::Int)) => block_item = BlockItem::Declaration(parse_declaration(tokens)),
         Some(_) => block_item = BlockItem::Statement(parse_statement(tokens)),
         None => panic!("Expected block"),
@@ -93,12 +71,12 @@ fn parse_block_item(tokens: &mut PeekableNth<Iter<Token>>) -> BlockItem {
 fn parse_declaration(tokens: &mut PeekableNth<Iter<Token>>) -> Declaration {
     let declaration: Declaration;
 
-    match tokens.peek_nth(0) {
+    match tokens.peek() {
         Some(Token::Keyword(Keyword::Int)) => {
             tokens.next();
             match tokens.next() {
                 Some(Token::Identifier(id)) => {
-                    if let Some(&&Token::Operator(Operator::Assignment)) = tokens.peek_nth(0) {
+                    if let Some(&&Token::Operator(Operator::Assignment)) = tokens.peek() {
                         tokens.next();
                         declaration = Declaration::Declare(id.clone(), Some(parse_expression(tokens)));
                     } else {
@@ -120,7 +98,7 @@ fn parse_declaration(tokens: &mut PeekableNth<Iter<Token>>) -> Declaration {
 fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
     let statement: Statement;
 
-    match tokens.peek_nth(0) {
+    match tokens.peek() {
         Some(Token::Keyword(Keyword::Return)) => {
             tokens.next();
             statement = Statement::Return(parse_expression(tokens));
@@ -129,6 +107,10 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             tokens.next();
             return parse_if_statement(tokens);
         } 
+        Some(Token::Punctuation(Punctuation::OpenBrace)) => {
+            let block = parse_block(tokens);
+            return Statement::Compound(block);
+        }
         None => panic!("Expected statement"),
         _ => statement = Statement::Expression(parse_expression(tokens)),
     }
@@ -146,7 +128,7 @@ fn parse_if_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             match tokens.next() {
                 Some(Token::Punctuation(Punctuation::CloseParen)) => {
                     let next_statement = parse_statement(tokens);
-                    match tokens.peek_nth(0) {
+                    match tokens.peek() {
                         Some(Token::Keyword(Keyword::Else)) => {
                             tokens.next();
                             let else_statement = parse_statement(tokens);
@@ -163,7 +145,7 @@ fn parse_if_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
 }
 
 fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
-    match tokens.peek_nth(0) {
+    match tokens.peek() {
         Some(Token::Identifier(id)) => {
             match tokens.peek_nth(1) {
                 Some(Token::Operator(op)) if op == &Operator::Assignment => {
@@ -182,7 +164,7 @@ fn parse_conditional_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expres
     let mut expression = parse_logical_or_expression(tokens);
     
     loop {
-        match tokens.peek_nth(0) {
+        match tokens.peek() {
             Some(Token::Punctuation(Punctuation::QuestionMark)) => {
                 tokens.next();
                 let true_expression = parse_expression(tokens);
@@ -205,7 +187,7 @@ fn parse_logical_or_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Express
     let mut expression = parse_logical_and_expression(tokens);
     
     loop {
-        match tokens.peek_nth(0) {
+        match tokens.peek() {
             Some(Token::Operator(op)) if op == &Operator::LogicalOr => {
                 tokens.next();
                 let next_expression = parse_logical_and_expression(tokens);
@@ -222,7 +204,7 @@ fn parse_logical_and_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expres
     let mut expression = parse_equality_expression(tokens);
     
     loop {
-        match tokens.peek_nth(0) {
+        match tokens.peek() {
             Some(Token::Operator(op)) if op == &Operator::LogicalAnd => {
                 tokens.next();
                 let next_expression = parse_equality_expression(tokens);
@@ -239,7 +221,7 @@ fn parse_equality_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expressio
     let mut term = parse_relational_expression(tokens);
 
     loop {
-        match tokens.peek_nth(0) {
+        match tokens.peek() {
             Some(Token::Operator(op)) if op == &Operator::Equal || op == &Operator::NotEqual => {
                 tokens.next();
                 let next_term = parse_relational_expression(tokens);
@@ -256,7 +238,7 @@ fn parse_relational_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Express
     let mut term = parse_additive_expression(tokens);
 
     loop {
-        match tokens.peek_nth(0) {
+        match tokens.peek() {
             Some(Token::Operator(op)) if op == &Operator::LessThan
                 || op == &Operator::LessThanOrEqual
                 || op == &Operator::GreaterThan
@@ -277,7 +259,7 @@ fn parse_additive_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expressio
     let mut term = parse_term(tokens);
 
     loop {
-        match tokens.peek_nth(0) {
+        match tokens.peek() {
             Some(Token::Operator(op)) if op == &Operator::Plus || op == &Operator::Minus => {
                 tokens.next();
                 let next_term = parse_term(tokens);
@@ -294,7 +276,7 @@ fn parse_term(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
     let mut factor = parse_factor(tokens);
 
     loop {
-        match tokens.peek_nth(0) {
+        match tokens.peek() {
             Some(Token::Operator(op)) if op == &Operator::Multiplication || op == &Operator::Division => {
                 tokens.next();
                 let next_factor = parse_factor(tokens);

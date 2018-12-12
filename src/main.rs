@@ -29,8 +29,7 @@ fn main() {
     let ast = parse(&tokens);
     // println!("{:#?}", ast);
 
-    let generated = generate(&ast);
-    println!("{}", generated);
+    generate(&ast);
 }
 
 fn read_file(input: &str) -> Result<String, Error> {

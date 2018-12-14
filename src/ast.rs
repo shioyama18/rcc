@@ -20,9 +20,15 @@ pub enum BlockItem {
 #[derive(Debug)]
 pub enum Statement {
     Return(Expression),
-    Expression(Expression),
+    Expression(Option<Expression>),
     Conditional(Expression, Box<Statement>, Option<Box<Statement>>),
     Compound(Block),
+    For(Option<Expression>, Expression, Option<Expression>, Box<Statement>),
+    ForDeclaration(Declaration, Expression, Option<Expression>, Box<Statement>),
+    While(Expression, Box<Statement>),
+    Do(Box<Statement>, Expression),
+    Break,
+    Continue,
 }
 
 #[derive(Debug)]

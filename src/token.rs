@@ -13,6 +13,11 @@ pub enum Keyword {
     Return,
     If,
     Else,
+    For,
+    While,
+    Do,
+    Break,
+    Continue,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

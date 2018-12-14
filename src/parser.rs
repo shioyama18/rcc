@@ -71,9 +71,8 @@ fn parse_block_item(tokens: &mut PeekableNth<Iter<Token>>) -> BlockItem {
 fn parse_declaration(tokens: &mut PeekableNth<Iter<Token>>) -> Declaration {
     let declaration: Declaration;
 
-    match tokens.peek() {
+    match tokens.next() {
         Some(Token::Keyword(Keyword::Int)) => {
-            tokens.next();
             match tokens.next() {
                 Some(Token::Identifier(id)) => {
                     if let Some(&&Token::Operator(Operator::Assignment)) = tokens.peek() {
@@ -108,11 +107,33 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             return parse_if_statement(tokens);
         } 
         Some(Token::Punctuation(Punctuation::OpenBrace)) => {
+            // TODO: tokens.next() and handle body in parse_block
             let block = parse_block(tokens);
             return Statement::Compound(block);
         }
-        None => panic!("Expected statement"),
-        _ => statement = Statement::Expression(parse_expression(tokens)),
+        Some(Token::Keyword(Keyword::For)) => {
+            tokens.next();
+            return parse_for_statement(tokens);
+        }
+        Some(Token::Keyword(Keyword::While)) => {
+            tokens.next();
+            return parse_while_statement(tokens);
+        }
+        Some(Token::Keyword(Keyword::Do)) => {
+            tokens.next();
+            statement = parse_do_statement(tokens);
+        }
+        Some(Token::Keyword(Keyword::Break)) => {
+            tokens.next();
+            statement = Statement::Break;
+        }
+        Some(Token::Keyword(Keyword::Continue)) => {
+            tokens.next();
+            statement = Statement::Continue;
+        }
+        _ => {
+            statement = Statement::Expression(parse_optional_expression(tokens));
+        }
     }
 
     match tokens.next() {
@@ -141,6 +162,106 @@ fn parse_if_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             }
         }
         _ => panic!("Expected opening parenthesis"),
+    }
+}
+
+fn parse_for_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
+    match tokens.next() {
+        Some(Token::Punctuation(Punctuation::OpenParen)) => {
+            match tokens.peek() {
+                Some(Token::Keyword(Keyword::Int)) => {
+                    let init = parse_declaration(tokens);
+
+                    let (condition, modifier, body) = parse_for_components(tokens);
+
+                    return Statement::ForDeclaration(init, condition, modifier, Box::new(body));
+                }
+                _ => {
+                    let init = parse_optional_expression(tokens);
+                    if let Some(Token::Punctuation(Punctuation::Semicolon)) = tokens.peek() {
+                        tokens.next();
+                    } else {
+                        panic!("Expected semicolon after initializer");
+                    }
+
+                    let (condition, modifier, body) = parse_for_components(tokens);
+                    return Statement::For(init, condition, modifier, Box::new(body));
+                }
+            }
+        }
+        _ => panic!("Expected open parenthesis"),
+    }
+}
+
+fn parse_for_components(tokens: &mut PeekableNth<Iter<Token>>) -> (Expression, Option<Expression>, Statement) {
+    let condition = match parse_optional_expression(tokens) {
+        Some(expr) => expr,
+        None => Expression::Constant(1),
+    };
+
+    let modifier: Option<Expression>;
+    let body: Statement;
+    
+    match tokens.next() {
+        Some(Token::Punctuation(Punctuation::Semicolon)) => {
+            modifier = parse_optional_expression(tokens);
+            match tokens.next() {
+                Some(Token::Punctuation(Punctuation::CloseParen)) => {
+                    body = parse_statement(tokens);
+                }
+                _ => panic!("Expected close parenthesis"),
+            }
+        }
+        _ => panic!("Expected semicolon after conditional expression"),
+    }
+
+    return (condition, modifier, body);
+}
+
+fn parse_while_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
+    match tokens.next() {
+        Some(Token::Punctuation(Punctuation::OpenParen)) => {
+            let expr = parse_expression(tokens);
+            match tokens.next() {
+                Some(Token::Punctuation(Punctuation::CloseParen)) => {
+                    let body = parse_statement(tokens);
+                    return Statement::While(expr, Box::new(body));
+                }
+                _ => panic!("Expected close parenthesis"),
+            }
+        }
+        _ => panic!("Expected open parenthesis"),
+    }
+}
+fn parse_do_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
+    let statement = parse_statement(tokens);
+    match tokens.next() {
+        Some(Token::Keyword(Keyword::While)) => {
+            match tokens.next() {
+                Some(Token::Punctuation(Punctuation::OpenParen)) => {
+                    let expr = parse_expression(tokens);
+                    match tokens.next() {
+                        Some(Token::Punctuation(Punctuation::CloseParen)) => {
+                            return Statement::Do(Box::new(statement), expr);
+                        }
+                        _ => panic!("Expected close parenthesis"),
+                    }
+                }
+                _ => panic!("Expected open parenthesis"),
+            }
+        }
+        _ => panic!("Expected while keyword"),
+    }
+}
+
+fn parse_optional_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Option<Expression> {
+    match tokens.peek() {
+        Some(Token::Punctuation(Punctuation::Semicolon)) => {
+            return None;
+        }
+        _ => {
+            return Some(parse_expression(tokens));
+        }
     }
 }
 

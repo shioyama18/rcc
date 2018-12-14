@@ -4,11 +4,13 @@ use token::Keyword::*;
 use token::Punctuation::*;
 
 pub fn lex(input: &str) -> Vec<Token> {
+    // TODO: use iterator with peek()
     let input = input.chars().collect::<Vec<_>>();
     let mut i = 0;
     let length = input.len();
     let mut tokens = Vec::new();
 
+    // TODO: implement Assignment Operator
     while i < length {
         match input[i] {
             '(' => tokens.push(Token::Punctuation(OpenParen)),
@@ -86,6 +88,11 @@ pub fn lex(input: &str) -> Vec<Token> {
                         "return" => tokens.push(Token::Keyword(Return)),
                         "if" => tokens.push(Token::Keyword(If)),
                         "else" => tokens.push(Token::Keyword(Else)),
+                        "for" => tokens.push(Token::Keyword(For)),
+                        "while" => tokens.push(Token::Keyword(While)),
+                        "do" => tokens.push(Token::Keyword(Do)),
+                        "break" => tokens.push(Token::Keyword(Break)),
+                        "continue" => tokens.push(Token::Keyword(Continue)),
                         _ => tokens.push(Token::Identifier(s)),
                     }
                     

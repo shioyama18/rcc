@@ -80,7 +80,7 @@ fn generate_statement(statement: &Statement, context: &Context) {
             }
         }
         Statement::Conditional(expr, if_body, else_body) => {
-            let post_if_label = unique("post_if_");
+            let post_if_label = add_unique_suffix("post_if");
 
             generate_expression(expr, &context);
             println!("  cmp rax, 0");
@@ -88,7 +88,7 @@ fn generate_statement(statement: &Statement, context: &Context) {
             generate_statement(if_body, &context);
 
             if let Some(else_statement) = else_body {
-                let post_else_label = unique("post_else_");
+                let post_else_label = add_unique_suffix("post_else");
                 println!("  jmp {}", post_else_label);
                 
                 println!("{}:", post_if_label);
@@ -103,8 +103,8 @@ fn generate_statement(statement: &Statement, context: &Context) {
             generate_block(block, &context);
         }
         Statement::While(expr, body) => {
-            let while_label = unique("while_");
-            let post_while_label = unique("post_while_");
+            let while_label = add_unique_suffix("while");
+            let post_while_label = add_unique_suffix("post_while");
             
             println!("{}:", while_label);
             generate_expression(expr, &context);
@@ -115,7 +115,7 @@ fn generate_statement(statement: &Statement, context: &Context) {
             println!("{}:", post_while_label);
         }
         Statement::Do(body, expr) => {
-            let do_while_label = unique("do_while_");
+            let do_while_label = add_unique_suffix("do_while");
             println!("{}:", do_while_label);
             generate_statement(body, &context);
             generate_expression(expr, &context);
@@ -123,8 +123,8 @@ fn generate_statement(statement: &Statement, context: &Context) {
             println!("  jne {}", do_while_label);
         }
         Statement::For(init, condition, post_expression, body) => {
-            let for_label = unique("for_");
-            let post_for_label = unique("post_for_");
+            let for_label = add_unique_suffix("for");
+            let post_for_label = add_unique_suffix("post_for");
 
             if let Some(expr) = init {
                 generate_expression(expr, &context);
@@ -145,8 +145,8 @@ fn generate_statement(statement: &Statement, context: &Context) {
         }
         Statement::ForDeclaration(decl, condition, post_expression, body) => {
             let mut context: Context = context.clone();
-            let for_label = unique("for_");
-            let post_for_label = unique("post_for_");
+            let for_label = add_unique_suffix("for");
+            let post_for_label = add_unique_suffix("post_for");
             
             generate_declaration(decl, &mut context);
             
@@ -268,11 +268,11 @@ fn generate_expression(expression: &Expression, context: &Context) {
             generate_expression(e1, context); 
             println!("  cmp rax, 0");
 
-            let e_label = unique("e_");
+            let e_label = add_unique_suffix("e");
             println!("  je {}", e_label);
             
             generate_expression(e2, context);
-            let post_conditional_label = unique("post_conditional_");
+            let post_conditional_label = add_unique_suffix("post_conditional");
             println!("  jmp {}", post_conditional_label);
             
             println!("{}:", e_label);

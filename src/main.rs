@@ -1,5 +1,4 @@
 extern crate rcc;
-extern crate peek_nth;
 
 use std::fs::File;
 use std::io::prelude::*;

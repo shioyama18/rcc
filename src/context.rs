@@ -22,11 +22,8 @@ impl Context {
 
     pub fn reset_scope(&self) -> Self {
         Context {
-            var_map: self.var_map.clone(),
             current_scope: HashSet::new(),
-            stack_index: self.stack_index,
-            break_label: self.break_label.clone(),
-            continue_label: self.continue_label.clone(),
+            ..self.clone()
         }
     }
 }

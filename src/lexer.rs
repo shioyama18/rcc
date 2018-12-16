@@ -7,7 +7,6 @@ pub fn lex(input: &str) -> Vec<Token> {
     let mut input = input.chars().peekable();
     let mut tokens = Vec::new();
 
-    // TODO: implement Compound Assignment Operator
     while let Some(c) = input.next() {
         match c {
             '(' => tokens.push(Token::Punctuation(OpenParen)),
@@ -17,11 +16,46 @@ pub fn lex(input: &str) -> Vec<Token> {
             ';' => tokens.push(Token::Punctuation(Semicolon)),
             ':' => tokens.push(Token::Punctuation(Colon)),
             '?' => tokens.push(Token::Punctuation(QuestionMark)),
-            '+' => tokens.push(Token::Operator(Plus)),
-            '-' => tokens.push(Token::Operator(Minus)),
-            '*' => tokens.push(Token::Operator(Multiplication)),
-            '/' => tokens.push(Token::Operator(Division)),
-            '%' => tokens.push(Token::Operator(Modulo)),
+            '+' => {
+                if let Some(&'=') = input.peek() {
+                    input.next();
+                    tokens.push(Token::Operator(AssignPlus));
+                } else {
+                    tokens.push(Token::Operator(Plus));
+                }
+            }
+            '-' => {
+                if let Some(&'=') = input.peek() {
+                    input.next();
+                    tokens.push(Token::Operator(AssignMinus));
+                } else {
+                    tokens.push(Token::Operator(Minus));
+                }
+            }
+            '*' => {
+                if let Some(&'=') = input.peek() {
+                    input.next();
+                    tokens.push(Token::Operator(AssignMult));
+                } else {
+                    tokens.push(Token::Operator(Multiplication));
+                }
+            }
+            '/' => {
+                if let Some(&'=') = input.peek() {
+                    input.next();
+                    tokens.push(Token::Operator(AssignDiv));
+                } else {
+                    tokens.push(Token::Operator(Division));
+                }
+            }
+            '%' => {
+                if let Some(&'=') = input.peek() {
+                    input.next();
+                    tokens.push(Token::Operator(AssignMod));
+                } else {
+                    tokens.push(Token::Operator(Modulo));
+                }
+            }
             '!' => {
                 if let Some(&'=') = input.peek() {
                     input.next();

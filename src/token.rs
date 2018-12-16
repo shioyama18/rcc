@@ -49,6 +49,11 @@ pub enum Operator {
     GreaterThan,          // >
     GreaterThanOrEqual,   // >=
     Assignment,           // =
+    AssignPlus,           // +=
+    AssignMinus,          // -=
+    AssignMult,           // *=
+    AssignDiv,            // /=
+    AssignMod,            // %=
 }
 
 impl Operator {
@@ -63,7 +68,12 @@ impl Operator {
     
     pub fn is_assignment(&self) -> bool {
         match self {
-            Operator::Assignment => true,
+            | Operator::Assignment
+            | Operator::AssignPlus
+            | Operator::AssignMinus
+            | Operator::AssignMult
+            | Operator::AssignDiv
+            | Operator::AssignMod => true,
             _ => false,
         }
     }

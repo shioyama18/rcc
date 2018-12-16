@@ -263,15 +263,39 @@ fn generate_expression(expression: &Expression, context: &Context) {
                 _ => panic!("Unexpected binary operator"),
             }
         }
-        Expression::AssignOp(_op, name, expr) => {
-            // TODO: implement compound assignment operators
+        Expression::AssignOp(op, name, expr) => {
             generate_expression(expr, context);
             
             if !context.var_map.contains_key(name) {
                 panic!("Variable undeclared");
             } else {
                 let offset: isize = *context.var_map.get(name).expect("Missing offset");
-                println!("  mov [rbp{}], rax", offset);
+                match op {
+                    Operator::Assignment => println!("  mov [rbp{}], rax", offset),
+                    Operator::AssignPlus => println!("  add [rbp{}], rax", offset),
+                    Operator::AssignMinus => println!("  sub [rbp{}], rax", offset),
+                    Operator::AssignMult => {
+                        println!("  mov rdi, rax");
+                        println!("  mov rax, [rbp{}]", offset);
+                        println!("  mul rdi");
+                        println!("  mov [rbp{}], rax", offset);
+                    }
+                    Operator::AssignDiv => {
+                        println!("  mov rdi, rax");
+                        println!("  mov rax, [rbp{}]", offset);
+                        println!("  mov rdx, 0");
+                        println!("  div rdi");
+                        println!("  mov [rbp{}], rax", offset);
+                    }
+                    Operator::AssignMod => {
+                        println!("  mov rdi, rax");
+                        println!("  mov rax, [rbp{}]", offset);
+                        println!("  mov rdx, 0");
+                        println!("  div rdi");
+                        println!("  mov [rbp{}], rdx", offset);
+                    }
+                    _ => panic!("Unexpected assignment operator"),
+                }
             }
         }
         Expression::Variable(name) => {

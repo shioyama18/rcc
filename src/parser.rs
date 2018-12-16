@@ -19,8 +19,13 @@ fn parse_function(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
                                 Some(Token::Punctuation(Punctuation::OpenParen)) => {
                                     match tokens.next() {
                                         Some(Token::Punctuation(Punctuation::CloseParen)) => {
-                                            let block = parse_block(tokens);
-                                            return Program::Program(FunctionDeclaration::Function(id.clone(), block));
+                                            match tokens.next() {
+                                                Some(Token::Punctuation(Punctuation::OpenBrace)) => {
+                                                    let block = parse_block(tokens);
+                                                    return Program::Program(FunctionDeclaration::Function(id.clone(), block));
+                                                }
+                                                _ => panic!("Expected opening braces"),
+                                            }
                                         }
                                         _ => panic!("Expected closing parenthesis"),
                                     }
@@ -41,13 +46,8 @@ fn parse_function(tokens: &mut PeekableNth<Iter<Token>>) -> Program {
 fn parse_block(tokens: &mut PeekableNth<Iter<Token>>) -> Block {
     let mut block = Vec::new();
     
-    match tokens.next() {
-        Some(Token::Punctuation(Punctuation::OpenBrace)) => {
-            while tokens.peek() != Some(&&Token::Punctuation(Punctuation::CloseBrace)) {
-                block.push(parse_block_item(tokens));
-            }
-        }
-        _ => panic!("Expected opening braces at start of block"),
+    while tokens.peek() != Some(&&Token::Punctuation(Punctuation::CloseBrace)) {
+        block.push(parse_block_item(tokens));
     }
 
     match tokens.next() {
@@ -107,9 +107,8 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             return parse_if_statement(tokens);
         } 
         Some(Token::Punctuation(Punctuation::OpenBrace)) => {
-            // TODO: tokens.next() and handle body in parse_block
-            let block = parse_block(tokens);
-            return Statement::Compound(block);
+            tokens.next();
+            return Statement::Compound(parse_block(tokens));
         }
         Some(Token::Keyword(Keyword::For)) => {
             tokens.next();
@@ -269,9 +268,9 @@ fn parse_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
     match tokens.peek() {
         Some(Token::Identifier(id)) => {
             match tokens.peek_nth(1) {
-                Some(Token::Operator(op)) if op == &Operator::Assignment => {
-                    tokens.next(); // id
-                    tokens.next(); // =
+                Some(Token::Operator(op)) if op.is_assignment() => {
+                    tokens.next(); // consume id
+                    tokens.next(); // consume op
                     return Expression::AssignOp(*op, id.clone(), Box::new(parse_expression(tokens)));
                 }
                 _ => parse_conditional_expression(tokens),

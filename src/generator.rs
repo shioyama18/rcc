@@ -260,6 +260,23 @@ fn generate_expression(expression: &Expression, context: &Context) {
                         _ => panic!("Unexpected logical binary operator"),
                     }
                 }
+                Operator::BitwiseAnd | Operator::BitwiseOr | Operator::BitwiseXor | 
+                Operator::BitwiseShiftLeft | Operator::BitwiseShiftRight => {
+                    match op {
+                        Operator::BitwiseAnd => println!("  and rax, rdi"),
+                        Operator::BitwiseOr => println!("  or rax, rdi"),
+                        Operator::BitwiseXor => println!("  xor rax, rdi"),
+                        Operator::BitwiseShiftLeft => {
+                            println!("  mov rcx, rdi");
+                            println!("  shl rax, cl");
+                        }
+                        Operator::BitwiseShiftRight => {
+                            println!("  mov rcx, rdi");
+                            println!("  shr rax, cl");
+                        }
+                        _ => panic!("Unexpected bitwise operator"),
+                    }
+                }
                 _ => panic!("Unexpected binary operator"),
             }
         }

@@ -70,7 +70,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     input.next();
                     tokens.push(Token::Operator(LogicalAnd));
                 } else {
-                    panic!("Bitwise AND not implemented yet");
+                    tokens.push(Token::Operator(BitwiseAnd));
                 }
             }
             '|' => {
@@ -78,7 +78,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                     input.next();
                     tokens.push(Token::Operator(LogicalOr));
                 } else {
-                    panic!("Bitwise Or not implemented yet");
+                    tokens.push(Token::Operator(BitwiseOr));
                 }
             }
             '=' => {
@@ -93,6 +93,9 @@ pub fn lex(input: &str) -> Vec<Token> {
                 if let Some(&'=') = input.peek() {
                     input.next();
                     tokens.push(Token::Operator(LessThanOrEqual));
+                } else if let Some(&'<') = input.peek() {
+                    input.next();
+                    tokens.push(Token::Operator(BitwiseShiftLeft));
                 } else {
                     tokens.push(Token::Operator(LessThan));
                 }
@@ -101,10 +104,14 @@ pub fn lex(input: &str) -> Vec<Token> {
                 if let Some(&'=') = input.peek() {
                     input.next();
                     tokens.push(Token::Operator(GreaterThanOrEqual));
+                } else if let Some(&'>') = input.peek() {
+                    input.next();
+                    tokens.push(Token::Operator(BitwiseShiftRight));
                 } else {
                     tokens.push(Token::Operator(GreaterThan));
                 }
             }
+            '^' => tokens.push(Token::Operator(BitwiseXor)),
             _ => {
                 if c.is_alphabetic() {
                     let mut s = c.to_string();

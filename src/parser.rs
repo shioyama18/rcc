@@ -355,7 +355,7 @@ fn parse_equality_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expressio
 }
 
 fn parse_relational_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
-    let mut term = parse_additive_expression(tokens);
+    let mut term = parse_bitwise_expression(tokens);
 
     loop {
         match tokens.peek() {
@@ -364,6 +364,23 @@ fn parse_relational_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Express
                 || op == &Operator::GreaterThan
                 || op == &Operator::GreaterThanOrEqual
             => {
+                tokens.next();
+                let next_term = parse_bitwise_expression(tokens);
+                term = Expression::BinaryOp(*op, Box::new(term), Box::new(next_term));
+            }
+            _ => break,
+        }
+    }
+    
+    term
+}
+
+fn parse_bitwise_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    let mut term = parse_additive_expression(tokens);
+
+    loop {
+        match tokens.peek() {
+            Some(Token::Operator(op)) if op.is_bitwise() => {
                 tokens.next();
                 let next_term = parse_additive_expression(tokens);
                 term = Expression::BinaryOp(*op, Box::new(term), Box::new(next_term));

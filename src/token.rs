@@ -39,6 +39,11 @@ pub enum Operator {
     Division,             // /
     Modulo,               // %
     BitwiseComplement,    // ~
+    BitwiseShiftLeft,     // <<
+    BitwiseShiftRight,    // >>
+    BitwiseAnd,           // &
+    BitwiseOr,            // |
+    BitwiseXor,           // ^
     LogicalNegation,      // !
     LogicalAnd,           // &&
     LogicalOr,            // ||
@@ -74,6 +79,17 @@ impl Operator {
             | Operator::AssignMult
             | Operator::AssignDiv
             | Operator::AssignMod => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_bitwise(&self) -> bool {
+        match self {
+            | Operator::BitwiseShiftLeft
+            | Operator::BitwiseShiftRight
+            | Operator::BitwiseAnd
+            | Operator::BitwiseOr
+            | Operator::BitwiseXor => true,
             _ => false,
         }
     }

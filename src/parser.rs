@@ -132,7 +132,7 @@ fn parse_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
             statement = Statement::Continue;
         }
         _ => {
-            statement = Statement::Expression(parse_optional_expression(tokens));
+            statement = Statement::Expression(parse_optional_expression(tokens, Punctuation::Semicolon));
         }
     }
 
@@ -177,7 +177,7 @@ fn parse_for_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
                     return Statement::ForDeclaration(init, condition, modifier, Box::new(body));
                 }
                 _ => {
-                    let init = parse_optional_expression(tokens);
+                    let init = parse_optional_expression(tokens,Punctuation::Semicolon);
                     if let Some(Token::Punctuation(Punctuation::Semicolon)) = tokens.peek() {
                         tokens.next();
                     } else {
@@ -194,7 +194,7 @@ fn parse_for_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
 }
 
 fn parse_for_components(tokens: &mut PeekableNth<Iter<Token>>) -> (Expression, Option<Expression>, Statement) {
-    let condition = match parse_optional_expression(tokens) {
+    let condition = match parse_optional_expression(tokens, Punctuation::Semicolon) {
         Some(expr) => expr,
         None => Expression::Constant(1),
     };
@@ -204,7 +204,7 @@ fn parse_for_components(tokens: &mut PeekableNth<Iter<Token>>) -> (Expression, O
     
     match tokens.next() {
         Some(Token::Punctuation(Punctuation::Semicolon)) => {
-            modifier = parse_optional_expression(tokens);
+            modifier = parse_optional_expression(tokens, Punctuation::CloseParen);
             match tokens.next() {
                 Some(Token::Punctuation(Punctuation::CloseParen)) => {
                     body = parse_statement(tokens);
@@ -242,7 +242,7 @@ fn parse_do_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
                     let expr = parse_expression(tokens);
                     match tokens.next() {
                         Some(Token::Punctuation(Punctuation::CloseParen)) => {
-                            return Statement::Do(Box::new(statement), expr);
+                            return Statement::DoWhile(Box::new(statement), expr);
                         }
                         _ => panic!("Expected close parenthesis"),
                     }
@@ -254,9 +254,9 @@ fn parse_do_statement(tokens: &mut PeekableNth<Iter<Token>>) -> Statement {
     }
 }
 
-fn parse_optional_expression(tokens: &mut PeekableNth<Iter<Token>>) -> Option<Expression> {
+fn parse_optional_expression(tokens: &mut PeekableNth<Iter<Token>>, expected: Punctuation) -> Option<Expression> {
     match tokens.peek() {
-        Some(Token::Punctuation(Punctuation::Semicolon)) => {
+        Some(Token::Punctuation(t)) if t == &expected => {
             return None;
         }
         _ => {
@@ -398,7 +398,7 @@ fn parse_term(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
 
     loop {
         match tokens.peek() {
-            Some(Token::Operator(op)) if op == &Operator::Multiplication || op == &Operator::Division => {
+            Some(Token::Operator(op)) if op == &Operator::Multiplication || op == &Operator::Division || op == &Operator::Modulo => {
                 tokens.next();
                 let next_factor = parse_factor(tokens);
                 factor = Expression::BinaryOp(*op, Box::new(factor), Box::new(next_factor));
@@ -411,6 +411,7 @@ fn parse_term(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
 }
 
 fn parse_factor(tokens: &mut PeekableNth<Iter<Token>>) -> Expression {
+    // println!("{:?}", tokens.peek());
     match tokens.next() {
         Some(Token::Punctuation(Punctuation::OpenParen)) => {
             let expression = parse_expression(tokens);

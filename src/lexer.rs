@@ -21,6 +21,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             '-' => tokens.push(Token::Operator(Minus)),
             '*' => tokens.push(Token::Operator(Multiplication)),
             '/' => tokens.push(Token::Operator(Division)),
+            '%' => tokens.push(Token::Operator(Modulo)),
             '!' => {
                 if let Some(&'=') = input.peek() {
                     input.next();

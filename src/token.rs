@@ -37,6 +37,7 @@ pub enum Operator {
     Minus,                // -
     Multiplication,       // *
     Division,             // /
+    Modulo,               // %
     BitwiseComplement,    // ~
     LogicalNegation,      // !
     LogicalAnd,           // &&

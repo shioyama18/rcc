@@ -80,7 +80,9 @@ fn generate_statement(statement: &Statement, context: &Context) {
             }
         }
         Statement::Conditional(expr, if_body, else_body) => {
-            let post_if_label = add_unique_suffix("post_if");
+            let suffix = unique_suffix();
+            let post_if_label = add_suffix("post_if", &suffix);
+            let post_else_label = add_suffix("post_else", &suffix);
 
             generate_expression(expr, &context);
             println!("  cmp rax, 0");
@@ -88,12 +90,9 @@ fn generate_statement(statement: &Statement, context: &Context) {
             generate_statement(if_body, &context);
 
             if let Some(else_statement) = else_body {
-                let post_else_label = add_unique_suffix("post_else");
                 println!("  jmp {}", post_else_label);
-                
                 println!("{}:", post_if_label);
                 generate_statement(else_statement, &context);
-                
                 println!("{}:", post_else_label);
             } else {
                 println!("{}:", post_if_label);
@@ -102,70 +101,84 @@ fn generate_statement(statement: &Statement, context: &Context) {
         Statement::Compound(block) => {
             generate_block(block, &context);
         }
-        Statement::While(expr, body) => {
-            let while_label = add_unique_suffix("while");
-            let post_while_label = add_unique_suffix("post_while");
-            
-            println!("{}:", while_label);
-            generate_expression(expr, &context);
-            println!("  cmp rax, 0");
-            println!("  je {}", post_while_label);
-            generate_statement(body, &context);
-            println!("  jmp {}", while_label);            
-            println!("{}:", post_while_label);
+        Statement::While(condition, body) => {
+            loop_helper(condition, &None, body, &context);
         }
-        Statement::Do(body, expr) => {
-            let do_while_label = add_unique_suffix("do_while");
-            println!("{}:", do_while_label);
-            generate_statement(body, &context);
-            generate_expression(expr, &context);
+        Statement::DoWhile(body, condition) => {
+            let suffix = unique_suffix();
+            let loop_label = add_suffix("loop", &suffix);
+            let break_label = add_suffix("post_loop", &suffix);
+            let continue_label = add_suffix("continue_do_while", &suffix);
+
+            println!("{}:", loop_label);
+
+            let body_context = Context {
+                break_label: Some(break_label.clone()),
+                continue_label: Some(continue_label.clone()),
+                ..context.clone()
+            };
+            generate_statement(body, &body_context);
+            generate_expression(condition, &context);
             println!("  cmp rax, 0");
-            println!("  jne {}", do_while_label);
+            println!("  jne {}", loop_label);
+            println!("{}:", break_label);
         }
         Statement::For(init, condition, post_expression, body) => {
-            let for_label = add_unique_suffix("for");
-            let post_for_label = add_unique_suffix("post_for");
-
             if let Some(expr) = init {
                 generate_expression(expr, &context);
             }
 
-            println!("{}:", for_label);
-            generate_expression(condition, &context);
-            println!("  cmp rax, 0");
-            println!("  je {}", post_for_label);
-            generate_statement(body, &context);
-
-            if let Some(expr) = post_expression {
-                generate_expression(expr, &context);
-            }
-
-            println!("  jmp {}", for_label);
-            println!("{}:", post_for_label);
+            loop_helper(condition, post_expression, body, &context);
         }
         Statement::ForDeclaration(decl, condition, post_expression, body) => {
             let mut context: Context = context.clone();
-            let for_label = add_unique_suffix("for");
-            let post_for_label = add_unique_suffix("post_for");
-            
             generate_declaration(decl, &mut context);
             
-            println!("{}:", for_label);
-            generate_expression(condition, &context);
-            println!("  cmp rax, 0");
-            println!("  je {}", post_for_label);
-            generate_statement(body, &context);
-
-            if let Some(expr) = post_expression {
-                generate_expression(expr, &context);
-            }
-
-            println!("  jmp {}", for_label);
+            loop_helper(condition, post_expression, body, &context);
             println!("  pop rax");
-            println!("{}:", post_for_label);
         }
-        _ => unimplemented!(),
+        Statement::Break => {
+            match context.break_label {
+                Some(label) => println!("  jmp {}", label),
+                None => panic!("Break statement not in loop"),
+            }
+        }
+        Statement::Continue => {
+            match context.continue_label {
+                Some(label) => println!("  jmp {}", label),
+                None => panic!("Continue statement not in loop"),
+            }
+        }
     }
+}
+
+fn loop_helper(condition: &Expression, post_expression: &Option<Expression>, body: &Statement, context: &Context) {
+    let suffix = unique_suffix();
+    let loop_label = add_suffix("loop", &suffix);
+    let post_loop_label = add_suffix("post_loop", &suffix);
+    let continue_label = add_suffix("loop_continue", &suffix);
+
+    println!("{}:", loop_label);
+    generate_expression(condition, context);
+    println!("  cmp rax, 0");
+    println!("  je {}", post_loop_label);
+
+    let body_context = Context {
+        break_label: Some(post_loop_label.clone()),
+        continue_label: Some(continue_label.clone()),
+        ..context.clone()
+    };
+
+    generate_statement(body, &body_context);
+
+    println!("{}:", continue_label);
+
+    if let Some(expr) = post_expression {
+        generate_expression(expr, &context);
+    }
+
+    println!("  jmp {}", loop_label);
+    println!("{}:", post_loop_label);
 }
 
 fn generate_expression(expression: &Expression, context: &Context) {
@@ -197,7 +210,7 @@ fn generate_expression(expression: &Expression, context: &Context) {
             println!("  pop rdi");
 
             match op {
-                Operator::Plus | Operator::Minus | Operator::Multiplication | Operator::Division => {
+                Operator::Plus | Operator::Minus | Operator::Multiplication | Operator::Division | Operator::Modulo => {
                     match op {
                         Operator::Plus => println!("  add rax, rdi"),
                         Operator::Minus => println!("  sub rax, rdi"),
@@ -205,6 +218,11 @@ fn generate_expression(expression: &Expression, context: &Context) {
                         Operator::Division => {
                             println!("  mov rdx, 0");
                             println!("  div rdi");
+                        }
+                        Operator::Modulo => {
+                            println!("  mov rdx, 0");
+                            println!("  div rdi");
+                            println!("  mov rax, rdx");
                         }
                         _ => panic!("Unexpected binary operator"),
                     }
@@ -265,16 +283,16 @@ fn generate_expression(expression: &Expression, context: &Context) {
             }
         }
         Expression::TernaryOp(e1, e2, e3) => {
-            generate_expression(e1, context); 
+            generate_expression(e1, context);
             println!("  cmp rax, 0");
 
-            let e_label = add_unique_suffix("e");
+            let suffix = unique_suffix();
+            let e_label = add_suffix("e", &suffix);
+            let post_conditional_label = add_suffix("post_conditional", &suffix);
+
             println!("  je {}", e_label);
-            
             generate_expression(e2, context);
-            let post_conditional_label = add_unique_suffix("post_conditional");
             println!("  jmp {}", post_conditional_label);
-            
             println!("{}:", e_label);
             generate_expression(e3, context);
             

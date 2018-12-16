@@ -26,7 +26,7 @@ pub enum Statement {
     For(Option<Expression>, Expression, Option<Expression>, Box<Statement>),
     ForDeclaration(Declaration, Expression, Option<Expression>, Box<Statement>),
     While(Expression, Box<Statement>),
-    Do(Box<Statement>, Expression),
+    DoWhile(Box<Statement>, Expression),
     Break,
     Continue,
 }

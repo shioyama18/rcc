@@ -1,7 +1,7 @@
-use util::*;
-use token::*;
 use ast::*;
 use context::*;
+use token::*;
+use util::*;
 
 pub fn generate(ast: &Program) {
     println!(".intel_syntax noprefix");
@@ -13,7 +13,7 @@ pub fn generate(ast: &Program) {
     }
 }
 
-fn generate_function(name: &String, block: &Block) {
+fn generate_function(name: &str, block: &[BlockItem]) {
     let context = Context::new();
 
     println!(".global {}", name);
@@ -28,7 +28,7 @@ fn generate_function(name: &String, block: &Block) {
     generate_function_epilogue();
 }
 
-fn generate_block(block: &Block, context: &Context) {
+fn generate_block(block: &[BlockItem], context: &Context) {
     let mut context = context.clone();
 
     for block_item in block {
@@ -133,26 +133,27 @@ fn generate_statement(statement: &Statement, context: &Context) {
         Statement::ForDeclaration(decl, condition, post_expression, body) => {
             let mut context: Context = context.clone();
             generate_declaration(decl, &mut context);
-            
+
             loop_helper(condition, post_expression, body, &context);
             println!("  pop rax");
         }
-        Statement::Break => {
-            match context.break_label {
-                Some(label) => println!("  jmp {}", label),
-                None => panic!("Break statement not in loop"),
-            }
-        }
-        Statement::Continue => {
-            match context.continue_label {
-                Some(label) => println!("  jmp {}", label),
-                None => panic!("Continue statement not in loop"),
-            }
-        }
+        Statement::Break => match context.break_label {
+            Some(label) => println!("  jmp {}", label),
+            None => panic!("Break statement not in loop"),
+        },
+        Statement::Continue => match context.continue_label {
+            Some(label) => println!("  jmp {}", label),
+            None => panic!("Continue statement not in loop"),
+        },
     }
 }
 
-fn loop_helper(condition: &Expression, post_expression: &Option<Expression>, body: &Statement, context: &Context) {
+fn loop_helper(
+    condition: &Expression,
+    post_expression: &Option<Expression>,
+    body: &Statement,
+    context: &Context,
+) {
     let suffix = unique_suffix();
     let loop_label = add_suffix("loop", &suffix);
     let post_loop_label = add_suffix("post_loop", &suffix);
@@ -210,26 +211,31 @@ fn generate_expression(expression: &Expression, context: &Context) {
             println!("  pop rdi");
 
             match op {
-                Operator::Plus | Operator::Minus | Operator::Multiplication | Operator::Division | Operator::Modulo => {
-                    match op {
-                        Operator::Plus => println!("  add rax, rdi"),
-                        Operator::Minus => println!("  sub rax, rdi"),
-                        Operator::Multiplication => println!("  mul rdi"),
-                        Operator::Division => {
-                            println!("  mov rdx, 0");
-                            println!("  div rdi");
-                        }
-                        Operator::Modulo => {
-                            println!("  mov rdx, 0");
-                            println!("  div rdi");
-                            println!("  mov rax, rdx");
-                        }
-                        _ => panic!("Unexpected binary operator"),
+                Operator::Plus
+                | Operator::Minus
+                | Operator::Multiplication
+                | Operator::Division
+                | Operator::Modulo => match op {
+                    Operator::Plus => println!("  add rax, rdi"),
+                    Operator::Minus => println!("  sub rax, rdi"),
+                    Operator::Multiplication => println!("  mul rdi"),
+                    Operator::Division => {
+                        println!("  mov rdx, 0");
+                        println!("  div rdi");
                     }
-                }
-                Operator::Equal | Operator::NotEqual | 
-                Operator::LessThan | Operator::LessThanOrEqual | 
-                Operator::GreaterThan | Operator::GreaterThanOrEqual => {
+                    Operator::Modulo => {
+                        println!("  mov rdx, 0");
+                        println!("  div rdi");
+                        println!("  mov rax, rdx");
+                    }
+                    _ => panic!("Unexpected binary operator"),
+                },
+                Operator::Equal
+                | Operator::NotEqual
+                | Operator::LessThan
+                | Operator::LessThanOrEqual
+                | Operator::GreaterThan
+                | Operator::GreaterThanOrEqual => {
                     println!("  cmp rax, rdi");
                     match op {
                         Operator::Equal => println!("  sete al"),
@@ -242,47 +248,46 @@ fn generate_expression(expression: &Expression, context: &Context) {
                     }
                     println!("  movzb rax, al");
                 }
-                Operator::LogicalOr | Operator::LogicalAnd => {
-                    match op {
-                        Operator::LogicalOr => {
-                            println!("  or rdi, rax");
-                            println!("  setne al");
-                            println!("  movzb rax, al");
-                        }
-                        Operator::LogicalAnd => {
-                            println!("  cmp rdi, 0");
-                            println!("  setne dil");
-                            println!("  cmp rax, 0");
-                            println!("  setne al");
-                            println!("  movzb rax, al");
-                            println!("  and al, dil");
-                        }
-                        _ => panic!("Unexpected logical binary operator"),
+                Operator::LogicalOr | Operator::LogicalAnd => match op {
+                    Operator::LogicalOr => {
+                        println!("  or rdi, rax");
+                        println!("  setne al");
+                        println!("  movzb rax, al");
                     }
-                }
-                Operator::BitwiseAnd | Operator::BitwiseOr | Operator::BitwiseXor | 
-                Operator::BitwiseShiftLeft | Operator::BitwiseShiftRight => {
-                    match op {
-                        Operator::BitwiseAnd => println!("  and rax, rdi"),
-                        Operator::BitwiseOr => println!("  or rax, rdi"),
-                        Operator::BitwiseXor => println!("  xor rax, rdi"),
-                        Operator::BitwiseShiftLeft => {
-                            println!("  mov rcx, rdi");
-                            println!("  shl rax, cl");
-                        }
-                        Operator::BitwiseShiftRight => {
-                            println!("  mov rcx, rdi");
-                            println!("  shr rax, cl");
-                        }
-                        _ => panic!("Unexpected bitwise operator"),
+                    Operator::LogicalAnd => {
+                        println!("  cmp rdi, 0");
+                        println!("  setne dil");
+                        println!("  cmp rax, 0");
+                        println!("  setne al");
+                        println!("  movzb rax, al");
+                        println!("  and al, dil");
                     }
-                }
+                    _ => panic!("Unexpected logical binary operator"),
+                },
+                Operator::BitwiseAnd
+                | Operator::BitwiseOr
+                | Operator::BitwiseXor
+                | Operator::BitwiseShiftLeft
+                | Operator::BitwiseShiftRight => match op {
+                    Operator::BitwiseAnd => println!("  and rax, rdi"),
+                    Operator::BitwiseOr => println!("  or rax, rdi"),
+                    Operator::BitwiseXor => println!("  xor rax, rdi"),
+                    Operator::BitwiseShiftLeft => {
+                        println!("  mov rcx, rdi");
+                        println!("  shl rax, cl");
+                    }
+                    Operator::BitwiseShiftRight => {
+                        println!("  mov rcx, rdi");
+                        println!("  shr rax, cl");
+                    }
+                    _ => panic!("Unexpected bitwise operator"),
+                },
                 _ => panic!("Unexpected binary operator"),
             }
         }
         Expression::AssignOp(op, name, expr) => {
             generate_expression(expr, context);
-            
+
             if !context.var_map.contains_key(name) {
                 panic!("Variable undeclared");
             } else {
@@ -336,7 +341,7 @@ fn generate_expression(expression: &Expression, context: &Context) {
             println!("  jmp {}", post_conditional_label);
             println!("{}:", e_label);
             generate_expression(e3, context);
-            
+
             println!("{}:", post_conditional_label);
         }
     }
@@ -347,4 +352,3 @@ fn generate_function_epilogue() {
     println!("  pop rbp");
     println!("  ret");
 }
-

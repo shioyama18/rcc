@@ -1,7 +1,7 @@
-use token::*;
-use token::Operator::*;
 use token::Keyword::*;
+use token::Operator::*;
 use token::Punctuation::*;
+use token::*;
 
 pub fn lex(input: &str) -> Vec<Token> {
     let mut input = input.chars().peekable();
@@ -112,10 +112,11 @@ pub fn lex(input: &str) -> Vec<Token> {
                 }
             }
             '^' => tokens.push(Token::Operator(BitwiseXor)),
+            ',' => tokens.push(Token::Punctuation(Punctuation::Comma)),
             _ => {
                 if c.is_alphabetic() {
                     let mut s = c.to_string();
-                    
+
                     loop {
                         match input.peek() {
                             Some(a) if a.is_alphanumeric() => s.push(*a),
@@ -123,7 +124,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                         }
                         input.next();
                     }
-                    
+
                     match &s[..] {
                         "int" => tokens.push(Token::Keyword(Int)),
                         "return" => tokens.push(Token::Keyword(Return)),

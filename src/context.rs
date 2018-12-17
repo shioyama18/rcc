@@ -1,7 +1,7 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone)]
-pub struct Context { 
+#[derive(Debug, Clone, Default)]
+pub struct Context {
     pub var_map: HashMap<String, isize>,
     pub current_scope: HashSet<String>,
     pub stack_index: isize,
@@ -12,11 +12,8 @@ pub struct Context {
 impl Context {
     pub fn new() -> Self {
         Context {
-            var_map: HashMap::new(),
-            current_scope: HashSet::new(),
             stack_index: -8,
-            break_label: None,
-            continue_label: None,
+            ..Default::default()
         }
     }
 

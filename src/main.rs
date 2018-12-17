@@ -4,9 +4,9 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::Error;
 
+use rcc::generator::*;
 use rcc::lexer::*;
 use rcc::parser::*;
-use rcc::generator::*;
 
 fn main() {
     // TODO: use clap for command line arguments
@@ -15,7 +15,7 @@ fn main() {
         eprintln!("Error: Invalid number of arguments");
         std::process::exit(1);
     }
-    
+
     let tokens = match read_file(&args[0]) {
         Ok(s) => lex(&s),
         Err(e) => {

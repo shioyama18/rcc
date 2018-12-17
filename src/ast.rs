@@ -23,7 +23,12 @@ pub enum Statement {
     Expression(Option<Expression>),
     Conditional(Expression, Box<Statement>, Option<Box<Statement>>),
     Compound(Block),
-    For(Option<Expression>, Expression, Option<Expression>, Box<Statement>),
+    For(
+        Option<Expression>,
+        Expression,
+        Option<Expression>,
+        Box<Statement>,
+    ),
     ForDeclaration(Declaration, Expression, Option<Expression>, Box<Statement>),
     While(Expression, Box<Statement>),
     DoWhile(Box<Statement>, Expression),

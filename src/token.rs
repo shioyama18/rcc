@@ -4,7 +4,7 @@ pub enum Token {
     Keyword(Keyword),
     Constant(i32),
     Punctuation(Punctuation),
-    Operator(Operator)
+    Operator(Operator),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -29,51 +29,58 @@ pub enum Punctuation {
     Semicolon,
     Colon,
     QuestionMark,
+    Comma,
 }
 
+// TODO: Implement the operators shown below
+// AssignBitShl: <<=
+// AssignBitShr: >>=
+// AssignBitAnd: &=
+// AssignBitOr:  |=
+// AssingBitXor: ^=
+// Increment: ++
+// Decrement: --
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Operator {
-    Plus,                 // +
-    Minus,                // -
-    Multiplication,       // *
-    Division,             // /
-    Modulo,               // %
-    BitwiseComplement,    // ~
-    BitwiseShiftLeft,     // <<
-    BitwiseShiftRight,    // >>
-    BitwiseAnd,           // &
-    BitwiseOr,            // |
-    BitwiseXor,           // ^
-    LogicalNegation,      // !
-    LogicalAnd,           // &&
-    LogicalOr,            // ||
-    Equal,                // ==
-    NotEqual,             // !=
-    LessThan,             // <
-    LessThanOrEqual,      // <=
-    GreaterThan,          // >
-    GreaterThanOrEqual,   // >=
-    Assignment,           // =
-    AssignPlus,           // +=
-    AssignMinus,          // -=
-    AssignMult,           // *=
-    AssignDiv,            // /=
-    AssignMod,            // %=
+    Plus,               // +
+    Minus,              // -
+    Multiplication,     // *
+    Division,           // /
+    Modulo,             // %
+    BitwiseComplement,  // ~
+    BitwiseShiftLeft,   // <<
+    BitwiseShiftRight,  // >>
+    BitwiseAnd,         // &
+    BitwiseOr,          // |
+    BitwiseXor,         // ^
+    LogicalNegation,    // !
+    LogicalAnd,         // &&
+    LogicalOr,          // ||
+    Equal,              // ==
+    NotEqual,           // !=
+    LessThan,           // <
+    LessThanOrEqual,    // <=
+    GreaterThan,        // >
+    GreaterThanOrEqual, // >=
+    Assignment,         // =
+    AssignPlus,         // +=
+    AssignMinus,        // -=
+    AssignMult,         // *=
+    AssignDiv,          // /=
+    AssignMod,          // %=
 }
 
 impl Operator {
-    pub fn is_unary(&self) -> bool {
+    pub fn is_unary(self) -> bool {
         match self {
-            | Operator::Minus
-            | Operator::LogicalNegation
-            | Operator::BitwiseComplement => true,
+            Operator::Minus | Operator::LogicalNegation | Operator::BitwiseComplement => true,
             _ => false,
         }
     }
-    
-    pub fn is_assignment(&self) -> bool {
+
+    pub fn is_assignment(self) -> bool {
         match self {
-            | Operator::Assignment
+            Operator::Assignment
             | Operator::AssignPlus
             | Operator::AssignMinus
             | Operator::AssignMult
@@ -83,9 +90,9 @@ impl Operator {
         }
     }
 
-    pub fn is_bitwise(&self) -> bool {
+    pub fn is_bitwise(self) -> bool {
         match self {
-            | Operator::BitwiseShiftLeft
+            Operator::BitwiseShiftLeft
             | Operator::BitwiseShiftRight
             | Operator::BitwiseAnd
             | Operator::BitwiseOr

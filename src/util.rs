@@ -1,6 +1,6 @@
 static mut COUNTER: u32 = 0;
 
-pub fn add_suffix(word: &str, suffix: &String) -> String {
+pub fn add_suffix(word: &str, suffix: &str) -> String {
     let mut word = word.to_string();
     word.push_str(suffix);
     word

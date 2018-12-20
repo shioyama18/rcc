@@ -1,5 +1,5 @@
 # Rust C Compiler (rcc)
-[![Build Status](https://travis-ci.com/shioyama18/rcc.svg?branch=master)](https://travis-ci.com/shioyama18/rcc)
+[![Build Status](https://travis-ci.com/shioyama18/rcc.svg?branch=master)](https://travis-ci.org/shioyama18/rcc)
 [![](http://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 ## About

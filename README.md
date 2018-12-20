@@ -28,44 +28,44 @@ $ echo $?
 ## Progress
 Although "int" is the only supported type, you can define variables and functions. Below are list of implemented features:
 1. Arithmetic Operator 
-  - Addition (+)
-  - Subtraction (-) 
-  - Multiplication (*)
-  - Division (/)
-  - Modulus (%)
+   * Addition (+)
+   * Subtraction (-) 
+   * Multiplication (*)
+   * Division (/)
+   * Modulus (%)
 2. Logical Operator 
-  - AND (&&)
-  - OR (||) 
-  - NOT (!)
+   * AND (&&)
+   * OR (||) 
+   * NOT (!)
 3. Bitwise Operator
-  - AND (&) 
-  - OR (|)
-  - XOR (^)
-  - Complement (~)
-  - Left Shift (<<) 
-  - Right Shift (>>)
+   * AND (&) 
+   * OR (|)
+   * XOR (^)
+   * Complement (~)
+   * Left Shift (<<) 
+   * Right Shift (>>)
 4. Assignment Operator
-  - Assignment (=)
-  - Add and assign (+=)
-  - Subtract and assign (-=)
-  - Multiply and assign (*=)
-  - Divide and assign (/=)
-  - Modulo and assign (%=)
+   * Assignment (=)
+   * Add and assign (+=)
+   * Subtract and assign (-=)
+   * Multiply and assign (*=)
+   * Divide and assign (/=)
+   * Modulo and assign (%=)
 5. Relational Operator
-  - Equal (==)
-  - Not Equal (!=)
-  - Less Than (<)
-  - Less Than Or Equal (<=)
-  - Greater Than (>)
-  - Greater Than or Equal (>=)
+   * Equal (==)
+   * Not Equal (!=)
+   * Less Than (<)
+   * Less Than Or Equal (<=)
+   * Greater Than (>)
+   * Greater Than or Equal (>=)
 6. Conditional
-  - if
-  - Ternary Operator (?)
+   * if
+   * Ternary Operator (?)
 7. Loops 
-  - for
-  - while
-  - do .. while
-  - break
-  - continue
+   * for
+   * while
+   * do .. while
+   * break
+   * continue
 
 

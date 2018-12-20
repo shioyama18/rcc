@@ -10,9 +10,21 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new() -> Self {
+    pub fn new(params: &Vec<String>) -> Self {
+        let mut var_map = HashMap::new();
+        let mut current_scope = HashSet::new();
+        let mut param_offset = 16;
+
+        params.iter().for_each(|id| {
+            var_map.insert(id.clone(), param_offset);
+            current_scope.insert(id.clone());
+            param_offset += 8;
+        });
+
         Context {
+            var_map: var_map,
             stack_index: -8,
+            current_scope: current_scope,
             ..Default::default()
         }
     }
@@ -23,4 +35,6 @@ impl Context {
             ..self.clone()
         }
     }
+
+    pub fn add_var(&mut self) {}
 }

@@ -7,25 +7,34 @@ pub fn generate(ast: &Program) {
     println!(".intel_syntax noprefix");
 
     match ast {
-        Program::Program(FunctionDeclaration::Function(name, block)) => {
-            generate_function(name, block);
+        Program::Program(functions) => {
+            generate_functions(functions);
         }
     }
 }
 
-fn generate_function(name: &str, block: &[BlockItem]) {
-    let context = Context::new();
+fn generate_functions(functions: &Vec<FunctionDeclaration>) {
+    functions
+        .iter()
+        .for_each(|FunctionDeclaration::Function(name, params, body)| {
+            generate_function(name, params, body)
+        });
+}
 
-    println!(".global {}", name);
-    println!("{}:", name);
+fn generate_function(name: &str, params: &Vec<String>, body: &Option<Vec<BlockItem>>) {
+    if let Some(block) = body {
+        println!(".global {}", name);
+        println!("{}:", name);
 
-    println!("  push rbp");
-    println!("  mov rbp, rsp");
+        println!("  push rbp");
+        println!("  mov rbp, rsp");
 
-    generate_block(block, &context);
+        let context = Context::new(params);
 
-    println!("  mov rax, 0");
-    generate_function_epilogue();
+        generate_block(block, &context);
+        println!("  mov rax, 0");
+        generate_function_epilogue();
+    }
 }
 
 fn generate_block(block: &[BlockItem], context: &Context) {
@@ -293,28 +302,28 @@ fn generate_expression(expression: &Expression, context: &Context) {
             } else {
                 let offset: isize = *context.var_map.get(name).expect("Missing offset");
                 match op {
-                    Operator::Assignment => println!("  mov [rbp{}], rax", offset),
-                    Operator::AssignPlus => println!("  add [rbp{}], rax", offset),
-                    Operator::AssignMinus => println!("  sub [rbp{}], rax", offset),
+                    Operator::Assignment => println!("  mov [rbp{:+}], rax", offset),
+                    Operator::AssignPlus => println!("  add [rbp{:+}], rax", offset),
+                    Operator::AssignMinus => println!("  sub [rbp{:+}], rax", offset),
                     Operator::AssignMult => {
                         println!("  mov rdi, rax");
-                        println!("  mov rax, [rbp{}]", offset);
+                        println!("  mov rax, [rbp{:+}]", offset);
                         println!("  mul rdi");
-                        println!("  mov [rbp{}], rax", offset);
+                        println!("  mov [rbp{:+}], rax", offset);
                     }
                     Operator::AssignDiv => {
                         println!("  mov rdi, rax");
-                        println!("  mov rax, [rbp{}]", offset);
+                        println!("  mov rax, [rbp{:+}]", offset);
                         println!("  mov rdx, 0");
                         println!("  div rdi");
-                        println!("  mov [rbp{}], rax", offset);
+                        println!("  mov [rbp{:+}], rax", offset);
                     }
                     Operator::AssignMod => {
                         println!("  mov rdi, rax");
-                        println!("  mov rax, [rbp{}]", offset);
+                        println!("  mov rax, [rbp{:+}]", offset);
                         println!("  mov rdx, 0");
                         println!("  div rdi");
-                        println!("  mov [rbp{}], rdx", offset);
+                        println!("  mov [rbp{:+}], rdx", offset);
                     }
                     _ => panic!("Unexpected assignment operator"),
                 }
@@ -325,7 +334,7 @@ fn generate_expression(expression: &Expression, context: &Context) {
                 panic!("Variable undeclared");
             } else {
                 let offset: isize = *context.var_map.get(name).expect("Missing offset");
-                println!("  mov rax, [rbp{}]", offset);
+                println!("  mov rax, [rbp{:+}]", offset);
             }
         }
         Expression::TernaryOp(e1, e2, e3) => {
@@ -343,6 +352,17 @@ fn generate_expression(expression: &Expression, context: &Context) {
             generate_expression(e3, context);
 
             println!("{}:", post_conditional_label);
+        }
+        Expression::FunctionCall(id, args) => {
+            let arg_len = args.len();
+
+            args.iter().rev().for_each(|e| {
+                generate_expression(e, context);
+                println!("  push rax");
+            });
+
+            println!("  call {}", id);
+            println!("  add rsp, {}", arg_len * 8);
         }
     }
 }

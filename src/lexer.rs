@@ -119,7 +119,7 @@ pub fn lex(input: &str) -> Vec<Token> {
 
                     loop {
                         match input.peek() {
-                            Some(a) if a.is_alphanumeric() => s.push(*a),
+                            Some(&a) if a.is_alphanumeric() || a == '_' => s.push(a),
                             _ => break,
                         }
                         input.next();

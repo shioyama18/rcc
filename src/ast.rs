@@ -2,11 +2,11 @@ use token::*;
 
 #[derive(Debug)]
 pub enum Program {
-    Program(FunctionDeclaration),
+    Program(Vec<FunctionDeclaration>),
 }
 #[derive(Debug)]
 pub enum FunctionDeclaration {
-    Function(String, Block),
+    Function(String, Vec<String>, Option<Block>),
 }
 
 pub type Block = Vec<BlockItem>;
@@ -49,4 +49,5 @@ pub enum Expression {
     BinaryOp(Operator, Box<Expression>, Box<Expression>),
     AssignOp(Operator, String, Box<Expression>),
     TernaryOp(Box<Expression>, Box<Expression>, Box<Expression>),
+    FunctionCall(String, Vec<Expression>),
 }

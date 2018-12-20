@@ -10,7 +10,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(params: &Vec<String>) -> Self {
+    pub fn new(params: &[String]) -> Self {
         let mut var_map = HashMap::new();
         let mut current_scope = HashSet::new();
         let mut param_offset = 16;
@@ -22,9 +22,9 @@ impl Context {
         });
 
         Context {
-            var_map: var_map,
+            var_map,
             stack_index: -8,
-            current_scope: current_scope,
+            current_scope,
             ..Default::default()
         }
     }

@@ -13,7 +13,7 @@ pub fn generate(ast: &Program) {
     }
 }
 
-fn generate_functions(functions: &Vec<FunctionDeclaration>) {
+fn generate_functions(functions: &[FunctionDeclaration]) {
     functions
         .iter()
         .for_each(|FunctionDeclaration::Function(name, params, body)| {
@@ -21,7 +21,7 @@ fn generate_functions(functions: &Vec<FunctionDeclaration>) {
         });
 }
 
-fn generate_function(name: &str, params: &Vec<String>, body: &Option<Vec<BlockItem>>) {
+fn generate_function(name: &str, params: &[String], body: &Option<Vec<BlockItem>>) {
     if let Some(block) = body {
         println!(".global {}", name);
         println!("{}:", name);

@@ -1,7 +1,7 @@
-use ast::*;
-use context::*;
-use token::*;
-use util::*;
+use crate::ast::*;
+use crate::context::*;
+use crate::token::*;
+use crate::util::*;
 
 pub fn generate(ast: &Program) {
     println!(".intel_syntax noprefix");

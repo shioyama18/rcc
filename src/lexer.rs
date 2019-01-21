@@ -1,7 +1,7 @@
-use token::Keyword::*;
-use token::Operator::*;
-use token::Punctuation::*;
-use token::*;
+use crate::token::Keyword::*;
+use crate::token::Operator::*;
+use crate::token::Punctuation::*;
+use crate::token::*;
 
 pub fn lex(input: &str) -> Vec<Token> {
     let mut input = input.chars().peekable();

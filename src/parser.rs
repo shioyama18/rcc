@@ -2,8 +2,8 @@ use peek_nth::{IteratorExt, PeekableNth};
 use std::collections::HashMap;
 use std::slice::Iter;
 
-use ast::*;
-use token::*;
+use crate::ast::*;
+use crate::token::*;
 
 type FunctionMap = HashMap<String, (usize, bool)>;
 

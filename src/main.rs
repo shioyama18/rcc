@@ -23,9 +23,11 @@ fn main() {
             std::process::exit(1);
         }
     };
+    // Debug Tokens
     // println!("{:#?}", tokens);
 
     let ast = parse(&tokens);
+    // Debug AST
     // println!("{:#?}", ast);
 
     generate(&ast);

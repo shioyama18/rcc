@@ -157,3 +157,13 @@ pub fn lex(input: &str) -> Vec<Token> {
 
     tokens
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_punctuation() {
+        let input = "";
+    }
+}

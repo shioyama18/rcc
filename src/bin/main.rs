@@ -4,9 +4,9 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::io::Error;
 
-use rcc::generator::*;
-use rcc::lexer::*;
-use rcc::parser::*;
+use rcc::codegen::generator::*;
+use rcc::parse::lexer::*;
+use rcc::parse::parser::*;
 
 fn main() {
     // TODO: use clap for command line arguments
